@@ -233,16 +233,38 @@ expresion ::=
 	
 	|  expresion:vi IGUALDAD  expresion:vd
 	
-	| IDEN 
+	| IDEN:id
 	{:
-		//Hay que obtener el valor de IDEN
-
-		//Ahora hay que determinar si es compatible con ser una PrimitivaAritmetica comprobando su tipo.
-
-		//En caso de que así creo la primitiva, seteo su valor y la devuelvo.
-
-		//En caso contrario devuelvo error semántico indicando la incompatibilidad de los tipos.
-
+		//Hay que obtener el símbolo relacionado a IDEN
+		ScopeIf scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		SymbolBase identificador = syTable.getSymbol(id.getLexema());
+		//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser primitiva aritmética
+		switch(identificador.getClass().getSimpleName()){
+			case "SymbolConstant":
+				if(identificador.getType().getName().equals("entero")){
+					//Creo la primitiva en el caso de que el tipo de la constante sea entera. HAY QUE IMPLEMENTAR getValue() en simbolos constantes.
+					PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,Integer.parseInt(identificador.getValue()),null);
+					RESULT = primitiva;
+				}
+				else
+					throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética, sólo está permitido enteros.");
+				break;
+			case "SymbolParameter":
+				//TODO hasta que tenga aclarado qué es este tipo de símbolo
+				break;
+			case "SymbolVariable":
+				if(identificador.getType().getName().equals("entero")){
+					//Creo la primitiva en el caso de que el tipo de la constante sea entera. HAY QUE IMPLEMENTAR getValue() en simbolos variables.
+					PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,Integer.parseInt(identificador.getValue()),null);
+					RESULT = primitiva;
+				}
+				else
+					throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética, sólo está permitido enteros.");
+				break;
+			default:
+				throw new RuntimeException("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión aritmética.");
+		}
 	:}
 	| llamadafuncion 
 	
