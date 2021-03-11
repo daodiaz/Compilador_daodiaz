@@ -137,7 +137,7 @@ non terminal			procedimiento;
 non terminal			funcion;
 non terminal			selectorpof;
 
-non terminal            	parametrofuncionoproc;
+non terminal            parametrofuncionoproc;
 non terminal 			llamadafuncion ; 
 
 non terminal 			parteizquierdaasignacion;  
@@ -228,20 +228,66 @@ seccionsubprograma ::=COMIENZOSUBPROGRAMAS  defsubprograma  | epsilon ;
 // Definición de programa principal
 defprincipal ::= COMIENZOPROGRAMA IDEN DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO listaSentencias FINBLOQUESENTENCIAS FINPROGRAMA ;
 
-expresion ::=  expresion MENORQUE  expresion |  expresion IGUALDAD  expresion | IDEN | llamadafuncion | CIERTO | FALSO | miembrovector | NUM | expresionlvl2;
-expresionlvl2 ::=  expresion SUMA expresion | expresionlvl3 ;
-expresionlvl3 ::=  expresion YLOGICA expresion |  expresion PRODUCTO expresion | expresionlvl4;
-expresionlvl4 ::= NOLOGICO  expresion | expresionlvl5 ;
-expresionlvl5 ::= PIZQUIERDO expresion PDERECHO | CIZQUIERDO expresion CDERECHO  ;
+expresion ::=  
+	expresion:vi MENORQUE  expresion:vd
+	
+	|  expresion:vi IGUALDAD  expresion:vd
+	
+	| IDEN 
+	{:
+		//Hay que obtener el valor de IDEN
+
+		//Ahora hay que determinar si es compatible con ser una PrimitivaAritmetica comprobando su tipo.
+
+		//En caso de que así creo la primitiva, seteo su valor y la devuelvo.
+
+		//En caso contrario devuelvo error semántico indicando la incompatibilidad de los tipos.
+
+	:}
+	| llamadafuncion 
+	
+	| CIERTO 
+	
+	| FALSO 
+	
+	| miembrovector 
+	
+	| NUM:num
+	{:
+		//Creo la primitiva, le seteo su valor y la devuelvo.
+		PrimitivaAritmetica numero = new PrimitivaAritmetica(null, null, null);
+		numero.setValor(Integer.parseInt(num.getLexema()));
+		RESULT = numero;
+	:}
+	| expresionlvl2;
+expresionlvl2 ::=  
+	expresion:vi SUMA expresion:vd 
+	{:  
+		//ScopeIf scope = scopeManager.getCurrentScope();
+		//SymbolTableIF syTable = scope.getSymbolTable();
+		RESULT= new ExpresionAritmetica(vi, "+", vd);
+	:}
+	| expresionlvl3;
+expresionlvl3 ::=  
+	expresion:vi YLOGICA expresion:vd 
+	| expresion:vi PRODUCTO expresion:vd 
+	{:  
+		//ScopeIf scope = scopeManager.getCurrentScope();
+		//SymbolTableIF syTable = scope.getSymbolTable();
+		RESULT= new ExpresionAritmetica(vi, "+", vd);
+	:}
+	| expresionlvl4;
+expresionlvl4 ::= NOLOGICO  expresion:vd | expresionlvl5 ;
+expresionlvl5 ::= PIZQUIERDO expresion:va PDERECHO | CIZQUIERDO expresion:va CDERECHO  ;
 
 
 // Acceso a vectores
 miembrovector::= IDEN CIZQUIERDO valorango CDERECHO;
  
 // sentencias de asignacion
-parteizquierdaasignacion ::= IDEN |miembrovector  ;
+parteizquierdaasignacion ::= IDEN | miembrovector  ;
 sentenciadeasignacion ::= parteizquierdaasignacion ASIGNACION parametroasignacion DSENTENCIAS; 
-parametroasignacion ::= expresion ;
+parametroasignacion ::= expresion:ef ;
 
 // llamada a función
 parametrofuncionoproc ::=     listavariables ;
