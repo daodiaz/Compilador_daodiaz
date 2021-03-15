@@ -230,25 +230,54 @@ defprincipal ::= COMIENZOPROGRAMA IDEN DELIMFUNC seccionconstantes secciontipos 
 
 expresion ::=  
 	expresion:vi MENORQUE  expresion:vd
-	
+	{:
+		//Compruebo que ambas expresiones son o bien lógicas o bien primitivas lógicas.
+		if(((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))){
+			//En dicho caso creo la expresión aritmética.
+			RESULT= new ExpresionLogica(vi, "<", vd);
+		}
+		else
+			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
+	:}
 	|  expresion:vi IGUALDAD  expresion:vd
-	
+		{:
+		//Compruebo que ambas expresiones son o bien lógicas o bien primitivas lógicas.
+		if(((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))){
+			//En dicho caso creo la expresión aritmética.
+			RESULT= new ExpresionLogica(vi, "==", vd);
+		}
+		else
+			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
+	:}
 	| IDEN:id
 	{:
 		//Hay que obtener el símbolo relacionado a IDEN
 		ScopeIf scope = scopeManager.getCurrentScope();
 		SymbolTableIF syTable = scope.getSymbolTable();
-		SymbolBase identificador = syTable.getSymbol(id.getLexema());
-		//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser primitiva aritmética
+		String lexema = id.getLexema();
+		//Compruebo y obtengo el sombolo del identificador.
+		if(syTable.containsSymbol(lexema)){
+			SymbolBase identificador = syTable.getSymbol(id.getLexema());
+		}
+		else
+			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
+		//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser parte de una expresión.
 		switch(identificador.getClass().getSimpleName()){
 			case "SymbolConstant":
 				if(identificador.getType().getName().equals("entero")){
 					//Creo la primitiva en el caso de que el tipo de la constante sea entera. HAY QUE IMPLEMENTAR getValue() en simbolos constantes.
-					PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,Integer.parseInt(identificador.getValue()),null);
+					PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
+					primitiva.setValor(Integer.parseInt(identificador.getValue()));
+					RESULT = primitiva;
+				}
+				else if(identificador.getType().getName().equals("boolean")){
+					//HAY QUE IMPLEMENTAR getValue() en simbolos constantes.
+					PrimitivaLogica primitiva = new PrimitivaLogica(null,null,null);
+					primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
 					RESULT = primitiva;
 				}
 				else
-					throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética, sólo está permitido enteros.");
+					throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros.");
 				break;
 			case "SymbolParameter":
 				//TODO hasta que tenga aclarado qué es este tipo de símbolo
@@ -256,24 +285,97 @@ expresion ::=
 			case "SymbolVariable":
 				if(identificador.getType().getName().equals("entero")){
 					//Creo la primitiva en el caso de que el tipo de la constante sea entera. HAY QUE IMPLEMENTAR getValue() en simbolos variables.
-					PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,Integer.parseInt(identificador.getValue()),null);
+					PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
+					primitiva.setValor(Integer.parseInt(identificador.getValue()));
 					RESULT = primitiva;
 				}
+				else if(identificador.getType().getName().equals("boolean")){
+					//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
+					PrimitivaLogica primitiva = new PrimitivaLogica(null,null,null);
+					primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
+					RESULT = primitiva;
+				} 
 				else
-					throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética, sólo está permitido enteros.");
+					throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros.");
 				break;
 			default:
-				throw new RuntimeException("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión aritmética.");
+				throw new RuntimeException("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión.");
+		}			
+	:}
+	| llamadafuncion:f
+	{:
+		//Hay que obtener la función relacionada a llamadafuncion
+		ScopeIf scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		String lexema = f.getLexema();
+		//Compruebo y obtengo la función de la tabla de símbolos.
+		if(syTable.containsSymbol(lexema)){
+			SymbolBase funcion = syTable.getSymbol(lexema);
+		}
+		else
+			throw new RuntimeException("No existe ninguna función con nombre " + lexema);
+		//Según el tipo de la función creo un tipo de expresión u otra. TODO IMPLEMENTACION getReturn() en TypeFunction.
+		switch(funcion.getType().getReturn()){
+			case "entero":
+				//Creo una PrimitivaAritmetica. TODO IMPLEMENTAR getValue() en simbolos funciones.
+				PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
+				primitiva.setValor(Integer.parseInt(funcion.getValue()));
+				RESULT = primitiva;
+				break;
+			case "boolean": 
+				//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
+				PrimitivaLogica primitiva = new PrimitivaLogica(null,null,null);
+				primitiva.setValorLogico(Boolean.valueOf(funcion.getValue()));
+				RESULT = primitiva;
+				break;
+			default:
+				throw new RuntimeException("Las funciones con tipo de retorno " + funcion.getType().getReturn() + " no pueden formar parte de una expresión.");		
 		}
 	:}
-	| llamadafuncion 
-	
 	| CIERTO 
-	
+	{:
+		//Creo una primitiva lógica y le seteo su valor true.
+		PrimitivaLogica primitiva_logica = new PrimitivaLogica(null,null,null);
+		primitiva_logica.setValorLogico(true);
+		RESULT = primitiva_logica;
+	:}
 	| FALSO 
-	
-	| miembrovector 
-	
+	{:
+		//Creo una primitiva lógica y le seteo su valor false.
+		PrimitivaLogica primitiva_logica = new PrimitivaLogica(null,null,null);
+		primitiva_logica.setValorLogico(false);
+		RESULT = primitiva_logica;
+	:}
+	| miembrovector:v
+	{:
+		//Hay que obtener el vector relacionado con miembroVector
+		ScopeIf scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		String lexema = v.getLexema();
+		//Compruebo y obtengo el vector de la tabla de símbolos.
+		if(syTable.containsSymbol(lexema)){
+			SymbolBase vector = syTable.getSymbol(lexema);
+		}
+		else
+			throw new RuntimeException("No existe ningún vector con nombre " + lexema);
+		//Según el tipo del vector creo un tipo de expresión u otra. TODO IMPLEMENTACION getName() en TypeArray.
+		switch(vector.getType().getName()){
+			case "entero":
+				//Creo una PrimitivaAritmetica. TODO IMPLEMENTAR getValueElemento() en simbolos vectores.
+				PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
+				primitiva.setValor(Integer.parseInt(vector.getValueElemento()));
+				RESULT = primitiva;
+				break;
+			case "boolean": 
+				//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
+				PrimitivaLogica primitiva = new PrimitivaLogica(null,null,null);
+				primitiva.setValorLogico(Boolean.valueOf(vector.getValue()));
+				RESULT = primitiva;
+				break;
+			default:
+				throw new RuntimeException("Los vectores con elementos de tipo " + funcion.getType().getName() + " no pueden formar parte de una expresión.");		
+		}
+	:}
 	| NUM:num
 	{:
 		//Creo la primitiva, le seteo su valor y la devuelvo.
@@ -281,27 +383,84 @@ expresion ::=
 		numero.setValor(Integer.parseInt(num.getLexema()));
 		RESULT = numero;
 	:}
-	| expresionlvl2;
+	| expresionlvl2:lvl2
+	{:
+		//Simplemente devuelvo la expresión hasta el momento.
+		RESULT = lvl2;
+	:};
 expresionlvl2 ::=  
 	expresion:vi SUMA expresion:vd 
 	{:  
 		//ScopeIf scope = scopeManager.getCurrentScope();
 		//SymbolTableIF syTable = scope.getSymbolTable();
-		RESULT= new ExpresionAritmetica(vi, "+", vd);
+		
+		//Compruebo que ambas expresiones son o bien aritméticas o bien primitivas aritméticas.
+		if(((vi instanceof ExpresionAritmetica) ||(vi instanceof PrimitivaAritmetica)) && ((vd instanceof ExpresionAritmetica) ||	(vd instanceof PrimitivaAritmetica))){
+			//En dicho caso creo la expresión aritmética.
+			RESULT= new ExpresionAritmetica(vi, "+", vd);
+		}
+		else
+			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
 	:}
-	| expresionlvl3;
+	| expresionlvl3:lvl3
+	{:
+		//Simplemente devuelvo la expresión hasta el momento.
+		RESULT = lvl3;
+	:};
 expresionlvl3 ::=  
 	expresion:vi YLOGICA expresion:vd 
+	{:
+		//Compruebo que ambas expresiones son o bien lógicas o bien primitivas lógicas.
+		if(((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))){
+			//En dicho caso creo la expresión aritmética.
+			RESULT= new ExpresionLogica(vi, "&&", vd);
+		}
+		else
+			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
+	:}
 	| expresion:vi PRODUCTO expresion:vd 
 	{:  
 		//ScopeIf scope = scopeManager.getCurrentScope();
 		//SymbolTableIF syTable = scope.getSymbolTable();
-		RESULT= new ExpresionAritmetica(vi, "+", vd);
+		if(((vi instanceof ExpresionAritmetica) ||(vi instanceof PrimitivaAritmetica)) && ((vd instanceof ExpresionAritmetica) ||	(vd instanceof PrimitivaAritmetica))){
+			//En dicho caso creo la expresión aritmética.
+			RESULT= new ExpresionAritmetica(vi, "+", vd);
+		}
+		else
+			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
 	:}
-	| expresionlvl4;
-expresionlvl4 ::= NOLOGICO  expresion:vd | expresionlvl5 ;
-expresionlvl5 ::= PIZQUIERDO expresion:va PDERECHO | CIZQUIERDO expresion:va CDERECHO  ;
-
+	| expresionlvl4:lvl4
+	{:
+		//Simplemente devuelvo la expresión hasta el momento.
+		RESULT = lvl4;
+	:};
+expresionlvl4 ::= 
+	NOLOGICO  expresion:vd 
+	{:
+		//Compruebo que la expresión sea bien lógica o bien primitiva lógica.
+		if((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica)){
+			//En dicho caso creo la expresión aritmética.
+			RESULT= new ExpresionLogica(null, "!", vd);
+		}
+		else
+			throw new RuntimeException("Una expresión de tipo " + vd.getClass().getSimpleName() + " no puede ser parte de una expresión lógica de negación.");
+	:}
+	| expresionlvl5:lvl5 
+	{:
+		//Simplemente devuelvo la expresión hasta el momento.
+		RESULT = lvl5;
+	:};
+expresionlvl5 ::= 
+	PIZQUIERDO expresion:va PDERECHO
+	{:
+		//Simplemente devuelvo la expresión hasta el momento.
+		RESULT = va;
+	:}
+	| CIZQUIERDO expresion:va CDERECHO 
+	{:
+		//Simplemente devuelvo la expresión hasta el momento.
+		RESULT = va;
+	:};
 
 // Acceso a vectores
 miembrovector::= IDEN CIZQUIERDO valorango CDERECHO;
