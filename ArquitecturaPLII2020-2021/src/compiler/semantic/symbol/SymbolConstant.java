@@ -14,6 +14,7 @@ import es.uned.lsi.compiler.semantic.type.TypeIF;
 public class SymbolConstant
     extends SymbolBase
 {
+    private String value;
     
     /**
      * Constructor for SymbolConstant.
@@ -27,4 +28,12 @@ public class SymbolConstant
     {
         super (scope, name, type);
     } 
+    
+    public void setValue(String value) {
+    	this.value = value;
+    }
+    
+    public String getValue() {
+    	return value;
+    }
 }

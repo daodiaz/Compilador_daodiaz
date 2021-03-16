@@ -14,7 +14,8 @@ import es.uned.lsi.compiler.semantic.type.TypeIF;
 public class SymbolVariable
     extends SymbolBase
 {  
-   
+    private String value;
+    
     /**
      * Constructor for SymbolVariable.
      * @param scope The declaration scope.
@@ -27,4 +28,12 @@ public class SymbolVariable
     {
         super (scope, name, type);
     } 
+    
+    public void setValue(String value) {
+    	this.value = value;
+    }
+    
+    public String getValue() {
+    	return value;
+    }
 }

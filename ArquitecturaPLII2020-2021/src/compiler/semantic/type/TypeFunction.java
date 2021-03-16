@@ -12,7 +12,7 @@ import es.uned.lsi.compiler.semantic.ScopeIF;
 public class TypeFunction
     extends TypeProcedure
 {   
-    
+
     /**
      * Constructor for TypeFunction.
      * @param scope The declaration scope.
@@ -42,4 +42,5 @@ public class TypeFunction
         // TODO: Student work
         return 1;
     }
+    
 }

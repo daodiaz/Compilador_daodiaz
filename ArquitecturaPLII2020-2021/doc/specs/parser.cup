@@ -211,9 +211,31 @@ secciontipos ::= COMIENZODECLTIPOS deftipos | epsilon;
 
 // Definición de variables
 tipovariable ::= BOOLEANO | ENTERO | IDEN ;
-selectorvalororeferencia ::=  PARAMETROVALOR IDEN |expresion ;
+selectorvalororeferencia ::=  
+	PARAMETROVALOR IDEN:id
+	{:
+		String lexema = id.getLexema();
+		RESULT = lexema;
+	:} 
+	|	expresion;
 defvariables ::= listavariables DELIMFUNC tipovariable puntoycomaopcional defvariables | epsilon; 
-listavariables ::= selectorvalororeferencia DIDENTIFICADORES listavariables | selectorvalororeferencia | epsilon ;
+listavariables ::= 
+	selectorvalororeferencia:lex DIDENTIFICADORES listavariables:lista
+	{:
+		//¿Como obtener recursivamente todos los lexemas de una declaración?
+		if(lista == null){
+			ArrayList<String> list = new ArrayList<String>();
+			RESULT = list.add(lex)
+		}
+		else 
+			RESULT = lista.add(lex);
+	:} 
+	| selectorvalororeferencia:lex
+	{:
+		//¿¿??
+		RESULT = lex
+	:}
+	| epsilon;
 seccionvariables ::= DECLVARIABLES defvariables | epsilon  ;
 puntoycomaopcional ::= DSENTENCIAS | epsilon;
 
@@ -265,7 +287,7 @@ expresion ::=
 		switch(identificador.getClass().getSimpleName()){
 			case "SymbolConstant":
 				if(identificador.getType().getName().equals("entero")){
-					//Creo la primitiva en el caso de que el tipo de la constante sea entera. HAY QUE IMPLEMENTAR getValue() en simbolos constantes.
+					//Creo la primitiva en el caso de que el tipo de la constante sea entera.
 					PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
 					primitiva.setValor(Integer.parseInt(identificador.getValue()));
 					RESULT = primitiva;
@@ -284,8 +306,7 @@ expresion ::=
 				break;
 			case "SymbolVariable":
 				if(identificador.getType().getName().equals("entero")){
-					//Creo la primitiva en el caso de que el tipo de la constante sea entera. HAY QUE IMPLEMENTAR getValue() en simbolos variables.
-					PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
+					//Creo la primitiva en el caso de que el tipo de la constante sea entera. 
 					primitiva.setValor(Integer.parseInt(identificador.getValue()));
 					RESULT = primitiva;
 				}
@@ -314,16 +335,16 @@ expresion ::=
 		}
 		else
 			throw new RuntimeException("No existe ninguna función con nombre " + lexema);
-		//Según el tipo de la función creo un tipo de expresión u otra. TODO IMPLEMENTACION getReturn() en TypeFunction.
-		switch(funcion.getType().getReturn()){
+		//Según el tipo de la función creo un tipo de expresión u otra.
+		switch(funcion.getReturn()){
 			case "entero":
-				//Creo una PrimitivaAritmetica. TODO IMPLEMENTAR getValue() en simbolos funciones.
+				//Creo una PrimitivaAritmetica.
 				PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
 				primitiva.setValor(Integer.parseInt(funcion.getValue()));
 				RESULT = primitiva;
 				break;
 			case "boolean": 
-				//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
+				//Creo una PrimitivaLogica
 				PrimitivaLogica primitiva = new PrimitivaLogica(null,null,null);
 				primitiva.setValorLogico(Boolean.valueOf(funcion.getValue()));
 				RESULT = primitiva;
@@ -361,13 +382,12 @@ expresion ::=
 		//Según el tipo del vector creo un tipo de expresión u otra. TODO IMPLEMENTACION getName() en TypeArray.
 		switch(vector.getType().getName()){
 			case "entero":
-				//Creo una PrimitivaAritmetica. TODO IMPLEMENTAR getValueElemento() en simbolos vectores.
+				//Creo una PrimitivaAritmetica.
 				PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
-				primitiva.setValor(Integer.parseInt(vector.getValueElemento()));
+				primitiva.setValor(Integer.parseInt(vector.getValue()));
 				RESULT = primitiva;
 				break;
 			case "boolean": 
-				//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
 				PrimitivaLogica primitiva = new PrimitivaLogica(null,null,null);
 				primitiva.setValorLogico(Boolean.valueOf(vector.getValue()));
 				RESULT = primitiva;
@@ -466,9 +486,43 @@ expresionlvl5 ::=
 miembrovector::= IDEN CIZQUIERDO valorango CDERECHO;
  
 // sentencias de asignacion
-parteizquierdaasignacion ::= IDEN | miembrovector  ;
-sentenciadeasignacion ::= parteizquierdaasignacion ASIGNACION parametroasignacion DSENTENCIAS; 
-parametroasignacion ::= expresion:ef ;
+parteizquierdaasignacion ::= 
+	IDEN:id
+	{:
+		//Hay que obtener el símbolo relacionado a IDEN
+		ScopeIf scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		String lexema = id.getLexema();
+		//Compruebo y obtengo el sombolo del identificador.
+		if(syTable.containsSymbol(lexema)){
+			SymbolBase identificador = syTable.getSymbol(id.getLexema());
+		}
+		else
+			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
+		//Compruebo si el identificador corresponde a una variable.
+		if(identificador.getClass().getname().equals("SymbolVariable")){
+			RESULT = identificador;
+		} else
+			throw new RuntimeException("No se puede utilizar en una sentencia de asignación un símbolo de tipo: " + identificador.getClass().getName());
+	:} 
+	| miembrovector:mv
+	{:
+		RESULT = mv;
+	:};
+sentenciadeasignacion ::= parteizquierdaasignacion:pi ASIGNACION parametroasignacion:pd DSENTENCIAS
+	{:
+		//Compruebo si concuerdan los tipos de la parte izquierda y derecha y qué tipòs son, según sea seteo la SentenciaAsignacion.
+		if((pi.getType().getName().equals("entero") && pd.getType().getName().equals("entero"))){
+			RESULT = new SentenciaAsignacion(pi, pd, "entero");
+		} else if(pi.getType().getName().equals("boolean") && pd.getType().getName().equals("boolean")){
+			RESULT = new SentenciaAsignacion(pi,pd,"boolean");
+		} else
+			throw new RuntimeException("No se puede asignar a una variable de tipo " + pi.getType()-getName() + " una expresión de tipo " );
+	:}; 
+parametroasignacion ::= expresion:ex
+	{:
+		RESULT = ex;
+	:};
 
 // llamada a función
 parametrofuncionoproc ::=     listavariables ;

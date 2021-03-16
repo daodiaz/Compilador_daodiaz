@@ -13,6 +13,8 @@ import es.uned.lsi.compiler.semantic.type.TypeIF;
 public class SymbolFunction
     extends SymbolProcedure
 {
+    private String tipo_retorno;
+    private String value;
       
     /**
      * Constructor for SymbolFunction.
@@ -25,5 +27,21 @@ public class SymbolFunction
                            TypeIF type)
     {
         super (scope, name, type);
-    } 
+    }
+    
+    public void setReturn(String tipo_retorno) {
+    	this.tipo_retorno = tipo_retorno;
+    }
+    
+    public String getReturn() {
+    	return tipo_retorno;
+    }
+    
+    public void setValue(String value) {
+    	this.value = value;
+    }
+    
+    public String getValue() {
+    	return value;
+    }
 }
