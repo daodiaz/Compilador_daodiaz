@@ -218,22 +218,41 @@ selectorvalororeferencia ::=
 		RESULT = lexema;
 	:} 
 	|	expresion;
-defvariables ::= listavariables DELIMFUNC tipovariable puntoycomaopcional defvariables | epsilon; 
+defvariables ::= 
+	{:
+		ListaVariables.clearVariables();
+	:} 
+	listavariables:lista DELIMFUNC tipovariable:tipo puntoycomaopcional defvariables 
+	{:
+		//Obtengo el escope y la tabla de simbolos.
+		ScopeIf scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		//Obtengo los nombres de las variables en declaración en esta línea.
+		ArrayList<String> nombre_variables = ListaVariables.getVariables();
+		//Según el nombre del tipo guardo el tipo.
+		switch(tipo){
+			case "Simple":
+				break;
+		}
+		//Creo un símbolo para cada una de ellas según su tipo y nombre y la añado a la tabla de símbolos.
+		for(String nombre_variable : nombre_variables){
+			if(syTable.containsSymbol(nombre_variable)){
+				throws new RuntimeException("Ya existe una variable en este ámbito con el mismo nombre: " + nombre_variable);
+			}
+			SymbolVariable variable = new SymbolVariable(scope, );
+			syTable.addSymbol(nombre_variable, )
+		}
+	:}
+	| epsilon; 
 listavariables ::= 
 	selectorvalororeferencia:lex DIDENTIFICADORES listavariables:lista
 	{:
-		//¿Como obtener recursivamente todos los lexemas de una declaración?
-		if(lista == null){
-			ArrayList<String> list = new ArrayList<String>();
-			RESULT = list.add(lex)
-		}
-		else 
-			RESULT = lista.add(lex);
+		//He utilizado un métoido estático para poder ir añadiendo elementos.
+		ListaVariables.addVariable(lex);
 	:} 
 	| selectorvalororeferencia:lex
 	{:
-		//¿¿??
-		RESULT = lex
+		ListaVariables.addVariable(lex);
 	:}
 	| epsilon;
 seccionvariables ::= DECLVARIABLES defvariables | epsilon  ;
