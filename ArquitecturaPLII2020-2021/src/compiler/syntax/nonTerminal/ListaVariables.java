@@ -14,7 +14,9 @@ public class ListaVariables extends NonTerminal {
 	}
 	
 	public static void clearVariables() {
-		lista_variables.clear();
+		if(lista_variables != null) {
+			lista_variables.clear();
+		}
 	}
 	
 	public static ArrayList<String> getVariables(){

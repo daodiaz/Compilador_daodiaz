@@ -194,7 +194,11 @@ program ::=
   		syntaxErrorManager.syntaxInfo ("Parsing process ended.");
    :};
 
-axiom ::= defprincipal;
+axiom ::= 
+	{:
+		ScopeManager.openScope("Principal");
+	:} 
+	defprincipal;
 
 epsilon ::=;
 
@@ -210,7 +214,19 @@ valorango ::= NUM | IDEN | miembrovector;
 secciontipos ::= COMIENZODECLTIPOS deftipos | epsilon; 
 
 // Definición de variables
-tipovariable ::= BOOLEANO | ENTERO | IDEN ;
+tipovariable ::= 
+	BOOLEANO
+	{:
+		RESULT = "boolean";
+	:} 
+	| ENTERO 
+	{:
+		RESULT = "entero";
+	:}
+	| IDEN 
+	{:
+		RESULT = "vector";
+	:};
 selectorvalororeferencia ::=  
 	PARAMETROVALOR IDEN:id
 	{:
@@ -220,29 +236,52 @@ selectorvalororeferencia ::=
 	|	expresion;
 defvariables ::= 
 	{:
+		//Limpio la lista de variables de la línea anterior.
 		ListaVariables.clearVariables();
 	:} 
-	listavariables:lista DELIMFUNC tipovariable:tipo puntoycomaopcional defvariables 
-	{:
-		//Obtengo el escope y la tabla de simbolos.
+	listavariables:lista DELIMFUNC tipovariable:tipo puntoycomaopcional {:
+		//Obtengo el escope y la tabla de simbolos y de tipòs.
 		ScopeIf scope = scopeManager.getCurrentScope();
 		SymbolTableIF syTable = scope.getSymbolTable();
+		TypeTableIF tyTable = scope.getTypeTable();
 		//Obtengo los nombres de las variables en declaración en esta línea.
 		ArrayList<String> nombre_variables = ListaVariables.getVariables();
 		//Según el nombre del tipo guardo el tipo.
+		TypeBase tipe;
 		switch(tipo){
-			case "Simple":
+			case "entero":
+				//Hay que implementar que en TypeSimple se guarde el tipo nominal según lo indicado por el constructor.
+				tipe = new TypeSimple("entero");
+				//En el caso de que el tipo no se haya declarado antes, lo añado a la tabla de tipos.
+				if(!scope.containsType(scope, "entero")){
+					tyTable.addType(tipe);
+				}				
 				break;
+			case "boolean":
+				tipe = new TypeSimple("boolean");
+				if(!scope.containsType(scope, "boolean")){
+					tyTable.addType(tipe);
+				}		
+				break;
+			case "vector":
+				//¿Donde indicar el tamaño del vector?
+				tipe = new TypeArray();
+				if(!scope.containsType(scope, "vector")){
+					tyTable.addType(tipe);
+				}		
+				break;
+			default:
+				throw new RuntimeException("No se puede declarar una variable del tipo: " + tipo);
 		}
 		//Creo un símbolo para cada una de ellas según su tipo y nombre y la añado a la tabla de símbolos.
 		for(String nombre_variable : nombre_variables){
 			if(syTable.containsSymbol(nombre_variable)){
-				throws new RuntimeException("Ya existe una variable en este ámbito con el mismo nombre: " + nombre_variable);
+				throw new RuntimeException("Ya existe una variable en este ámbito con el mismo nombre: " + nombre_variable);
 			}
-			SymbolVariable variable = new SymbolVariable(scope, );
-			syTable.addSymbol(nombre_variable, )
+			SymbolVariable variable = new SymbolVariable(scope, nombre_variable, tipe);
+			syTable.addSymbol(nombre_variable, variable);
 		}
-	:}
+	:} defvariables 
 	| epsilon; 
 listavariables ::= 
 	selectorvalororeferencia:lex DIDENTIFICADORES listavariables:lista
@@ -278,7 +317,7 @@ expresion ::=
 			RESULT= new ExpresionLogica(vi, "<", vd);
 		}
 		else
-			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
+			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() + " con " + vd.getClass().getSimpleName());
 	:}
 	|  expresion:vi IGUALDAD  expresion:vd
 		{:
@@ -288,7 +327,7 @@ expresion ::=
 			RESULT= new ExpresionLogica(vi, "==", vd);
 		}
 		else
-			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
+			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() + " con " + vd.getClass().getSimpleName());
 	:}
 	| IDEN:id
 	{:
@@ -439,7 +478,7 @@ expresionlvl2 ::=
 			RESULT= new ExpresionAritmetica(vi, "+", vd);
 		}
 		else
-			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
+			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + vi.getClass().getSimpleName() + " con " + vd.getClass().getSimpleName());
 	:}
 	| expresionlvl3:lvl3
 	{:
@@ -455,7 +494,7 @@ expresionlvl3 ::=
 			RESULT= new ExpresionLogica(vi, "&&", vd);
 		}
 		else
-			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
+			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + vi.getClass().getSimpleName() + " con " + vd.getClass().getSimpleName());
 	:}
 	| expresion:vi PRODUCTO expresion:vd 
 	{:  
@@ -466,7 +505,7 @@ expresionlvl3 ::=
 			RESULT= new ExpresionAritmetica(vi, "+", vd);
 		}
 		else
-			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + vi.getClass().getSimpleName() " con " + vd.getClass().getSimpleName());
+			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + vi.getClass().getSimpleName() + " con " + vd.getClass().getSimpleName());
 	:}
 	| expresionlvl4:lvl4
 	{:
