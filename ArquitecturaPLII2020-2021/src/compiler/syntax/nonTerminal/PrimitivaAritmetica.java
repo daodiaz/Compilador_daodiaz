@@ -4,6 +4,7 @@ public class PrimitivaAritmetica extends Expresion {
 
 	public PrimitivaAritmetica(Expresion expresion_izq, String operando, Expresion expresion_der) {
 		super(expresion_izq, operando, expresion_der);
+		tipo = "entero";
 	}
 
 	/*En el caso de las primitivas lo único que hacen es devolver su valor*/

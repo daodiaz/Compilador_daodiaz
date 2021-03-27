@@ -6,6 +6,7 @@ public abstract class Expresion extends NonTerminal {
 	protected Expresion expresion_der;
 	protected int valor;
 	protected boolean valor_logico;
+	protected String tipo;
 	
 	public Expresion (Expresion expresion_izq, String operando, Expresion expresion_der) {
 		this.expresion_izq = expresion_izq;
@@ -30,6 +31,10 @@ public abstract class Expresion extends NonTerminal {
 	/*Método para devolver el valor de cualquier expresion*/
 	public boolean getValorLogico() {
 		return valor_logico;
+	}
+	
+	public String getType() {
+		return tipo;
 	}
 	
 }

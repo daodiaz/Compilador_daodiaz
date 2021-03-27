@@ -4,7 +4,7 @@ public class ExpresionLogica extends Expresion {
 
 	public ExpresionLogica(Expresion expresion_izq, String operando, Expresion expresion_der) {
 		super(expresion_izq, operando, expresion_der);
-		// TODO Auto-generated constructor stub
+		tipo = "boolean";
 	}
 
 	@Override

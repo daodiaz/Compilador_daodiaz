@@ -4,7 +4,7 @@ public class PrimitivaLogica extends Expresion {
 
 	public PrimitivaLogica(Expresion expresion_izq, String operando, Expresion expresion_der) {
 		super(expresion_izq, operando, expresion_der);
-		// TODO Auto-generated constructor stub
+		tipo = "boolean";
 	}
 
 	@Override

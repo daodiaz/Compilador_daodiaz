@@ -1,0 +1,8 @@
+# programa vacio
+programa uno:
+	variables
+		x,z,w	: entero;
+		v	: booleano;
+comienzo
+	x = 2 + v;
+fin.

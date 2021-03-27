@@ -6,6 +6,7 @@ public class ExpresionAritmetica extends Expresion {
 	
 	public ExpresionAritmetica(Expresion expresion_izq, String operando, Expresion expresion_der) {
 		super(expresion_izq, operando, expresion_der);
+		tipo = "entero";
 		
 	}
 	
