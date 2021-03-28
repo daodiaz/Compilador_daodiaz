@@ -2,6 +2,8 @@ package compiler.syntax.nonTerminal;
 
 public class PrimitivaAritmetica extends Expresion {
 
+	private String nombre_vector;
+	
 	public PrimitivaAritmetica(Expresion expresion_izq, String operando, Expresion expresion_der) {
 		super(expresion_izq, operando, expresion_der);
 		tipo = "entero";
@@ -17,6 +19,18 @@ public class PrimitivaAritmetica extends Expresion {
 	/*Método para setear el valor de la primitiva aritmética, se le debe de pasar argumento en Integer*/
 	public void setValor(Integer valor) {
 		this.valor = valor;
+	}
+	
+	public int getValor() {
+		return valor;	
+	}
+	
+	public void setNombreVector(String nombre) {
+		nombre_vector = nombre;
+	}
+	
+	public String getNombreVector() {
+		return nombre_vector;
 	}
 
 }

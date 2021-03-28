@@ -204,15 +204,172 @@ axiom ::=
 epsilon ::=;
 
 //Definición de constantes
-defconstantes ::=   IDEN ASIGNACION valorconstante DSENTENCIAS defconstantes | epsilon; 
-valorconstante ::=   FALSO | CIERTO | NUM ;
-seccionconstantes ::= BCONSTANTES defconstantes | epsilon;
+defconstantes ::=   
+	IDEN:id ASIGNACION valorconstante:valor DSENTENCIAS defconstantes
+	{:
+		System.out.println("Empezando a analizar línea de constante");
+		//Obtengo el escope y la tabla de simbolos y de tipòs.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		TypeTableIF tyTable = scope.getTypeTable();
+		TypeBase tipe;
+		//Obtengo el nombre de la constante.
+		String nombre_constante = ((TokenIF) id).getLexema();
+		//Dependiendo de si es entera o lógica añado la constante a la tabla de simbolos.
+		if(valor instanceof PrimitivaAritmetica){
+			if(syTable.containsSymbol()){
+				throw new RuntimeException("Ya existe una constante en este ámbito con el mismo nombre: " + nombre_variable);
+			}
+			//Compruebo que el tipo haya sido creado con anterioridad, en caso contrario lo creo y lo instancio.
+			if(!scope.getScopeManager().containsType("entero")){
+				tipe = new TypeSimple(scope, "entero");
+				tyTable.addType(tipe);
+			} else {
+				//En caso contrario lo obtengo de la propia tabla de tipos.
+				tipe = tyTable.getType(tipo);
+			}	
+			SymbolConstant constante = new SymbolConstant(scope, nombre_constante, tipe);
+			syTable.addSymbol(nombre_constante, constante);
+		} else if (valor instanceof PrimitivaLogica){
+			if(syTable.containsSymbol()){
+				throw new RuntimeException("Ya existe una constante en este ámbito con el mismo nombre: " + nombre_variable);
+			}
+			//Compruebo que el tipo haya sido creado con anterioridad, en caso contrario lo creo y lo instancio.
+			if(!scope.getScopeManager().containsType("boolean")){
+				tipe = new TypeSimple(scope, "boolean");
+				tyTable.addType(tipe);
+			} else {
+				//En caso contrario lo obtengo de la propia tabla de tipos.
+				tipe = tyTable.getType(tipo);
+			}	
+			SymbolConstant constante = new SymbolConstant(scope, nombre_constante, tipe);
+			syTable.addSymbol(nombre_constante, constante);
+		} else
+			throw new RuntimeException("Las constantes sólo pueden ser enteras o lógicas");
+	:}
+	| epsilon; 
+valorconstante ::=   
+	FALSO 
+	{:
+		System.out.println("Analizando declaración de constante lógica falsa");
+		PrimitivaLogica primitiva = new PrimitivaLogica(null, null, null);
+		RESULT= primitiva;
+	:}
+	| CIERTO 
+	{:
+		System.out.println("Analizando declaración de constante lógica cierta");
+		PrimitivaLogica primitiva = new PrimitivaLogica(null, null, null);
+		RESULT= primitiva;
+	:}
+	| NUM 
+	{:
+		System.out.println("Analizando declaración de constante aritmética");
+		PrimitivaAritemetica primitiva = new PrimitivaAritmetica(null,null,null);
+		RESULT= primitiva;
+	:};
+seccionconstantes ::= 
+	BCONSTANTES defconstantes
+	{:System.out.println("Sección de constantes analizada");:}
+	| epsilon;
 
  //Definición de tipos
-deftipos ::=IDEN ASIGNACION DECLVECTOR CIZQUIERDO valorango RANGO valorango CDERECHO ASIGNACIONVECTOR tipovector  DSENTENCIAS deftipos | epsilon;
-tipovector ::=BOOLEANO | ENTERO ;
-valorango ::= NUM | IDEN | miembrovector;
-secciontipos ::= COMIENZODECLTIPOS deftipos | epsilon; 
+deftipos ::=
+	IDEN:id ASIGNACION DECLVECTOR CIZQUIERDO valorango:rango_inf RANGO valorango:rango_sup CDERECHO ASIGNACIONVECTOR tipovector:tipo  DSENTENCIAS deftipos
+	{:
+		System.out.println("Empezando a analizar línea de tipos");
+		//Obtengo el escope y la tabla de simbolos y de tipòs.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		TypeTableIF tyTable = scope.getTypeTable();
+		TypeBase tipe;
+		//Obtengo el nombre del identificador del tipo.
+		String nombre_tipo = ((TokenIF) id).getLexema();
+		//Copmpruebo que no exista ya un tipo con este nombre.
+		if(scope.getScopeManager().containsType(nombre_tipo)){
+			throw new RuntimeException("Ya existe un tipo de usuario creado con el nombre: " + nombre_tipo);
+		}
+		//Obtengo tipo simple que forma parte del compuesto del usuario.
+		if(!scope.getScopeManager().containsType((String) tipo)){
+			if(tipo.equals("entero")){
+				tipe = new TypeSimple(scope, "entero");
+				tyTable.addType(tipe);
+			} else if(tipo.equals("boolean")){
+				tipe = new TypeSimple(scope, "boolean");
+				tyTable.addType(tipe);
+			} else {
+				throw new RuntimrException("Los tipos compuestos sólo pueden estar formados por tipos enteros o lógicos");
+			}
+		} else {
+			tipe = tyTable.getType((String) tipo);
+		}
+		//Calculo el rango del tipo declarado
+		int rango = (int) rango_sup - (int) rango_inf;
+		//Instancio el  nuevo tipo y lo añado a la tabla de tipos.
+		TypeArray tipo_usuario = new TypeArray(scope, nombre_tipo);
+		//Seteo el rango del tipo añadido y de su tipo base.
+		tipo_usuario.setRango(rango);
+		tipo_usuario.setTypeSimple(tipe);
+		tyTable.addType(tipo_usuario);
+	:} 
+	| epsilon;
+tipovector ::=
+	BOOLEANO
+	{:
+		System.out.println("Analizando declaración de vector de booleanos");
+		RESULT = "boolean";
+	:} 
+	| ENTERO
+	{:
+		System.out.println("Analizando declaración de vactor de enteros");
+		RESULT = "entero";
+	:};
+valorango ::= 
+	NUM:num
+	{:
+		//Tengo que obtener el numero del valor para pasarselo para calcular el rango del tipo.
+		int valor = Integer.parseInt(((TokenIF) num).getLexema());
+		RESULT = valor;
+	:} 
+	| IDEN:id
+	{:
+		//Tengo que obtener el valor del identificador para pasarselo para calcular el rango del tipo.
+		//Obtengo la scope y tabla de símbolos.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		String nombre_rango = ((TokenIF) id).getLexema();
+		//Compruebo que el identificador exista con anterioridad.
+		if(!scopeManager.containsSymbol(nombre_rango)){
+			throw new RuntimeException("No se puede establecer el rango debido a que no ha sido declarado con anterioridad el simbolo: " + nombre_rango);
+		}
+		//Obtengo el símbolo.
+		SymbolIF rango = scopeManager.searchSymbol(nombre_rango);
+		//Compruevo que el simbolo sea de tipo aritmético.
+		if(!rango.getType().getName().equals("entero")){
+			throw new RuntimeException("Sólo se pueden establecer rangos con simbolos enteros, actualmente es: " + rango.getType().getName());
+		}
+		//Compruebo que tenga valor asociado.
+		if(rango.getValue() == null){
+			throw new RuntimeException("Aunque el simbolo " + nombre_rango + " entero está declarado con anterioridad, aún no se le ha asignado un valor, actualmente es null, no se puede crear un rango de dimensión null");
+		}
+		//Obtengo el valor del simbolo entero obtenido.
+		int valor = Integer.parseInt(rango.getValue());
+		RESULT = valor;
+	:} 
+	| miembrovector:mv
+	{:
+		//Miembro vector devuelve una primitiva aritmetica o logica, solo si es entera obtengo su valor y lo devuelvo.
+		if(mv instanceof PrimitivaAritmetica) {
+			int valor_miembro = ((PrimitivaAritmetica) mv).getValor();
+			if( valor_miembro != null){
+				RESULT = valor_miembro;
+			} else {
+				throw new RuntimeException("El valor del miembro del vector no está inicialiado todavía, es null.");
+			}
+		} else
+			throw new RuntimeException("Sólo se pueden instanciar rangos de valores enteros, el miembro de vector es de valor: " + mg.getClass().getSimpleName());
+		
+	:};
+secciontipos ::= COMIENZODECLTIPOS deftipos {:System.out.println("Sección de tipos analizada");:} | epsilon; 
 
 // Definición de variables
 tipovariable ::= 
@@ -253,25 +410,31 @@ defvariables ::=
 		TypeBase tipe;
 		switch((String) tipo){
 			case "entero":
-				//Hay que implementar que en TypeSimple se guarde el tipo nominal según lo indicado por el constructor.
-				tipe = new TypeSimple(scope, "entero");
 				//En el caso de que el tipo no se haya declarado antes, lo añado a la tabla de tipos.
 				if(!scope.getScopeManager().containsType("entero")){
+					tipe = new TypeSimple(scope, "entero");
 					tyTable.addType(tipe);
+				} else {
+					//En caso contrario lo obtengo de la propia tabla de tipos.
+					tipe = tyTable.getType(tipo);
 				}				
 				break;
 			case "boolean":
-				tipe = new TypeSimple(scope, "boolean");
 				if(!scope.getScopeManager().containsType("boolean")){
+					tipe = new TypeSimple(scope, "boolean");
 					tyTable.addType(tipe);
-				}		
+				} else {
+					tipe = tyTable.getType(tipo);
+				}
 				break;
 			case "vector":
-				//¿Donde indicar el tamaño del vector?
-				tipe = new TypeArray(scope, "vector");
 				if(!scope.getScopeManager().containsType("vector")){
+					//¿Donde indicar el tamaño del vector?
+					tipe = new TypeArray(scope, "vector");
 					tyTable.addType(tipe);
-				}		
+				} else {
+					tipe = tyTable.getType(tipo);
+				}
 				break;
 			default:
 				throw new RuntimeException("No se puede declarar una variable del tipo: " + tipo);
@@ -345,8 +508,8 @@ expresion ::=
 		String lexema = ((TokenIF) id).getLexema();
 		SymbolIF identificador;
 		//Compruebo y obtengo el sombolo del identificador.
-		if(syTable.containsSymbol(lexema)){
-			identificador = syTable.getSymbol(((TokenIF) id).getLexema());
+		if(scopeManager.containsSymbol(lexema)){
+			identificador = scopeManager.searchSymbol(((TokenIF) id).getLexema());
 		}
 		else
 			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
@@ -401,8 +564,8 @@ expresion ::=
 		String lexema = ((TokenIF) f).getLexema();
 		SymbolFunction funcion;
 		//Compruebo y obtengo la función de la tabla de símbolos.
-		if(syTable.containsSymbol(lexema)){
-			funcion = (SymbolFunction) syTable.getSymbol(lexema);
+		if(scopeManager.containsSymbol(lexema)){
+			funcion = (SymbolFunction) scopeManager.searchSymbol(lexema);
 		}
 		else
 			throw new RuntimeException("No existe ninguna función con nombre " + lexema);
@@ -441,34 +604,7 @@ expresion ::=
 	:}
 	| miembrovector:v
 	{:
-		//Hay que obtener el vector relacionado con miembroVector
-		ScopeIF scope = scopeManager.getCurrentScope();
-		SymbolTableIF syTable = scope.getSymbolTable();
-		String lexema = ((TokenIF) v).getLexema();
-		SymbolIF vector;
-		//Compruebo y obtengo el vector de la tabla de símbolos.
-		if(syTable.containsSymbol(lexema)){
-			vector = syTable.getSymbol(lexema);
-		}
-		else
-			throw new RuntimeException("No existe ningún vector con nombre " + lexema);
-		//Según el tipo del vector creo un tipo de expresión u otra. TODO IMPLEMENTACION getName() en TypeArray.
-		Expresion primitiva;
-		switch(vector.getType().getName()){
-			case "entero":
-				//Creo una PrimitivaAritmetica.
-				primitiva = new PrimitivaAritmetica(null,null,null);
-				//primitiva.setValor(Integer.parseInt(vector.getValue()));
-				RESULT = primitiva;
-				break;
-			case "boolean": 
-				primitiva = new PrimitivaLogica(null,null,null);
-				//primitiva.setValorLogico(Boolean.valueOf(vector.getValue()));
-				RESULT = primitiva;
-				break;
-			default:
-				throw new RuntimeException("Los vectores con elementos de tipo " + vector.getType().getName() + " no pueden formar parte de una expresión.");		
-		}
+		RESULT = v;
 	:}
 	| NUM:num
 	{:
@@ -560,7 +696,39 @@ expresionlvl5 ::=
 	:};
 
 // Acceso a vectores
-miembrovector::= IDEN CIZQUIERDO valorango CDERECHO;
+miembrovector::= IDEN:id CIZQUIERDO valorango:rango CDERECHO
+	{:
+		//Hay que obtener el vector relacionado con miembroVector
+		ScopeIF scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		String lexema = ((TokenIF) v).getLexema();
+		String nombre_vector = ((TokenIF) id).getLexema();
+		SymbolIF vector; 
+		if(scopeManager.containsSymbol(nombre_vector)){
+			vector = scopeManager.searchSymbol(nombre_vector);
+		} else
+			throw new RuntimeException("No se ha encontrado un vector con el nombre: " + nombre_vector);		
+		//Según el tipo del vector creo un tipo de expresión u otra. TODO IMPLEMENTACION getName() en TypeArray.
+		Expresion primitiva;
+		switch(vector.getTypeSimple()){
+			case "entero":
+				//Creo una PrimitivaAritmetica.
+				primitiva = new PrimitivaAritmetica(null,null,null);
+				int valor_miembro = ((int) vector.getArray()[(int) rango]);
+				primitiva.setValor(valor_miembro);
+				primitiva.setNombreVector(nombre_vector);
+				RESULT = primitiva;
+				break;
+			case "boolean": 
+				primitiva = new PrimitivaLogica(null,null,null);
+				boolean valor_miembro = ((boolean) vector.getArray()[(int) rango]);
+				primitiva.setValorLogico(valor_miembro);
+				primitiva.setNombreVector(nombre_vector);
+				RESULT = primitiva;
+				break;
+			default:
+				throw new RuntimeException("Los vectores solo pueden estar conformados de enteros o lógicos, actualmente: " + vector.getTypeSimple());		
+	:};
  
 // sentencias de asignacion
 parteizquierdaasignacion ::= 
@@ -573,9 +741,13 @@ parteizquierdaasignacion ::=
 		String lexema = ((TokenIF) id).getLexema();
 		SymbolIF identificador;
 		//Compruebo y obtengo el sombolo del identificador.
-		if(syTable.containsSymbol(lexema)){
-			identificador = syTable.getSymbol(((TokenIF) id).getLexema());
+		if(scopeManager.containsSymbol(lexema)){
+			identificador = scopeManager.searchSymbol(((TokenIF) id).getLexema());
 			System.out.println("Variable encontrada en la tabla de símbolos de tipo: " + identificador.getType().getName());
+			//Si es una contante lo que hay en la parte izquierda; no está permitido. 
+			if(identificador instanceof SymbolConstant){
+				throw new RuntimeException("No se puede realizar una asignación de una constante");
+			}
 		}
 		else
 			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
@@ -588,7 +760,23 @@ parteizquierdaasignacion ::=
 	| miembrovector:mv
 	{:
 		System.out.println("Obteniendo parte vectorial izquierda de asignación");
-		RESULT = mv;
+		//Obtengo el simbolo del array del que forma parte el miembro.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		String lexema;
+		//Obtengo el nombre del vector
+		if(mv instanceof ExpresionAritmetica){
+			lexema = ((PrimitivaAritmetica) mv).getNombreVector();
+		} else
+			lexema = ((PrimitivaLogica) mv).getNombreVector();
+		
+		SymbolIF vector;
+		if(scopeManager.containsSymbol(lexema)){
+			vector = scopeManager.searchSymbol(lexema);
+		}
+		else
+			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
+		RESULT = vector;
 	:};
 sentenciadeasignacion ::= parteizquierdaasignacion:pi ASIGNACION parametroasignacion:pd DSENTENCIAS
 	{:
