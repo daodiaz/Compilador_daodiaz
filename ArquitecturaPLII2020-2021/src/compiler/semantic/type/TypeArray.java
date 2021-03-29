@@ -16,7 +16,7 @@ public class TypeArray
 {   
     int rango;
     TypeIF tipo_simple;
-    Object [] array;
+ 
 	/**
      * Constructor for TypeArray.
      * @param scope The declaration scope.
@@ -46,17 +46,21 @@ public class TypeArray
         // TODO: Student work
         return 1;
     }
-    
-    public void setSize(Integer rango) {
-    	this.rango = rango;
-    	array = new Object[rango];
-    }
+   
     
     public void setTypeSimple(TypeIF tipo_simple) {
     	this.tipo_simple = tipo_simple;
     }
     
-    public Object [] getArray() {
-    	return array;	
+    public TypeIF getTypeSimple() {
+    	return tipo_simple;	
+    }
+    
+    public void setRango(int rango) {
+    	this.rango = rango;
+    }
+    
+    public int getRango() {
+    	return rango;
     }
 }
