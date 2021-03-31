@@ -15,6 +15,8 @@ public class SymbolVariable
     extends SymbolBase
 {  
     private String value;
+    //Falso o null por valor, true por referencia.
+    private boolean valvsref;
     
     /**
      * Constructor for SymbolVariable.
@@ -35,5 +37,9 @@ public class SymbolVariable
     
     public String getValue() {
     	return value;
+    }
+    
+    public void setValVSRef(boolean bandera) {
+    	valvsref = bandera;
     }
 }

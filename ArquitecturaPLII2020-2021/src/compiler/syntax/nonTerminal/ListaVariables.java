@@ -3,13 +3,13 @@ package compiler.syntax.nonTerminal;
 import java.util.ArrayList;
 
 public class ListaVariables extends NonTerminal {
-	private static ArrayList<String> lista_variables = new ArrayList<String>();
+	private static ArrayList<Parametro> lista_variables = new ArrayList<Parametro>();
 	
 	public ListaVariables () {
 		
 	}
 	
-	public static void addVariable(String variable) {
+	public static void addVariable(Parametro variable) {
 		lista_variables.add(variable);
 	}
 	
@@ -19,7 +19,7 @@ public class ListaVariables extends NonTerminal {
 		}
 	}
 	
-	public static ArrayList<String> getVariables(){
+	public static ArrayList<Parametro> getVariables(){
 		return lista_variables;
 	}
 }

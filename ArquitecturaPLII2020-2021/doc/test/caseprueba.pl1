@@ -6,7 +6,21 @@ programa uno:
 		x,z,w	: entero;
 		v	: booleano;
 		h	: tipoVectorEnteros;
-comienzo
-	x = 2 + 3;
-	h[0] = 3;
-fin.
+	subprogramas
+		procedimiento ejemplo (a : entero):
+			comienzo
+				a = a + 1;
+			fin;
+		funcion ejFuncion (var a,b : entero): entero:
+			variables 
+				suma: entero;
+			comienzo
+ 				suma = a + b;
+				a = a + 2;
+				b = b * 2;
+				devolver suma;
+			fin;
+	comienzo
+		x = 2 + 3;
+		h[0] = 3;
+	fin.

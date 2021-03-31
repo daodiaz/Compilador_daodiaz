@@ -321,7 +321,7 @@ tipovector ::=
 	:} 
 	| ENTERO
 	{:
-		System.out.println("Analizando declaración de vactor de enteros");
+		System.out.println("Analizando declaración de vector de enteros");
 		RESULT = "entero";
 	:};
 valorango ::= 
@@ -401,8 +401,30 @@ selectorvalororeferencia ::=
 	{:
 		System.out.println("Obteniedno lexema de declaración de variable: " + ((TokenIF) id).getLexema());
 		String lexema = ((TokenIF) id).getLexema();
-		RESULT = lexema;
-	:};
+		//Creo el parámetro.
+		Parametro parametro = new Parametro(lexema, false);
+		RESULT = parametro;
+	:}
+	|	PARAMETROVALOR IDEN:id
+	{:
+		System.out.println("Obteniedno lexema de declaración de variable: " + ((TokenIF) id).getLexema());
+		String lexema = ((TokenIF) id).getLexema();
+		//Creo el parámetro.
+		Parametro parametro = new Parametro(lexema, true);
+		RESULT = parametro;
+	:};	
+listavariables ::= 
+	selectorvalororeferencia:parametro {:
+		//He utilizado un métoido estático para poder ir añadiendo elementos.
+		ListaVariables.addVariable((Parametro) parametro);
+		System.out.println("Declaración de variable analizada:" + ((Parametro) parametro).getNombre());
+	:} DIDENTIFICADORES listavariables
+	| selectorvalororeferencia:parametro
+	{:
+		ListaVariables.addVariable((Parametro) parametro);
+		System.out.println("Última declaración de variable analizada de la línea:" + ((Parametro) parametro).getNombre());
+	:}
+	| epsilon;
 defvariables ::= 
 	{:
 		System.out.println("Iniciando análisis de declaración de variables");
@@ -416,9 +438,10 @@ defvariables ::=
 		SymbolTableIF syTable = scope.getSymbolTable();
 		TypeTableIF tyTable = scope.getTypeTable();
 		//Obtengo los nombres de las variables en declaración en esta línea.
-		ArrayList<String> nombre_variables = ListaVariables.getVariables();
+		ArrayList<Parametro> parametros = ListaVariables.getVariables();
 		//Según el nombre del tipo guardo el tipo.
 		TypeIF tipe;
+		boolean vector = false;
 		switch((String) tipo){
 			case "entero":
 				//En el caso de que el tipo no se haya declarado antes, lo añado a la tabla de tipos.
@@ -427,7 +450,7 @@ defvariables ::=
 					tyTable.addType(tipe);
 				} else {
 					//En caso contrario lo obtengo de la propia tabla de tipos.
-					tipe = tyTable.getType("entero");
+					tipe = scopeManager.searchType("entero");
 				}				
 				break;
 			case "boolean":
@@ -435,52 +458,124 @@ defvariables ::=
 					tipe = new TypeSimple(scope, "boolean");
 					tyTable.addType(tipe);
 				} else {
-					tipe = tyTable.getType("boolean");
+					tipe = scopeManager.searchType("boolean");
 				}
 				break;
 			default:
 				if(!scope.getScopeManager().containsType((String) tipo)){
 					throw new RuntimeException("No se puede declarar variables con tipos de usuario no declarados anteriormente, declara el tipo antes de usarlo: " + (String) tipo);
 				} else {
-					tipe = tyTable.getType((String) tipo);
+					tipe = scopeManager.searchType((String) tipo);
+					vector = true;
 				}
 				break;
 		}
 		//Creo un símbolo para cada una de ellas según su tipo y nombre y la añado a la tabla de símbolos.
-		for(String nombre_variable : nombre_variables){
+		for(Parametro parametro : parametros){
+			String nombre_variable = parametro.getNombre();
 			if(syTable.containsSymbol(nombre_variable)){
 				throw new RuntimeException("Ya existe una variable en este ámbito con el mismo nombre: " + nombre_variable);
 			}
 			SymbolVariable variable = new SymbolVariable(scope, nombre_variable, tipe);
+			//Si la variable declarada ha tenido un var precediendole entonces es por referencia y le seteo dicha información.
+			if(parametro.getValVSRef() || vector){
+				variable.setValVSRef(true);			
+			}
+			System.out.println("Variable declarada con nombre " + nombre_variable + " y tipo " + tipe.getName());
 			syTable.addSymbol(nombre_variable, variable);
 		}
 	:} defvariables 
 	| epsilon; 
-listavariables ::= 
-	selectorvalororeferencia:lex {:
-		//He utilizado un métoido estático para poder ir añadiendo elementos.
-		ListaVariables.addVariable((String) lex);
-		System.out.println("Declaración de variable analizada:" + lex);
-	:} DIDENTIFICADORES listavariables:lista
-	| selectorvalororeferencia:lex 
-	{:
-		ListaVariables.addVariable((String) lex);
-		System.out.println("Última declaración de variable analizada de la línea:" + lex);
-	:}
-	| epsilon;
+
 seccionvariables ::= DECLVARIABLES defvariables | epsilon;
 puntoycomaopcional ::= DSENTENCIAS | epsilon;
 
 //reglas de subprogramas
-tiporetornofuncion ::= IDEN | tipovector ;
-procedimiento ::= COMIENZOPROCEDIMIENTO IDEN PIZQUIERDO defvariables PDERECHO DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO sentencia listaSentencias   FINBLOQUESENTENCIAS DSENTENCIAS ;
-funcion ::= DECLAREFUNCION IDEN PIZQUIERDO defvariables PDERECHO DELIMFUNC tiporetornofuncion DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO sentenciaFuncion listaSentenciasFuncion FINBLOQUESENTENCIAS DSENTENCIAS  ;
+tiporetornofuncion ::= 
+	IDEN:id 
+	{:	
+		String nombre_tipo = ((TokenIF) id).getLexema();
+		//Compruebo que el tipo ya haya sido declarado en la scope, sino, lanzo error.
+		if(!scopeManager.containsType(nombre_tipo)){
+			throw new RuntimeException("No se puede crear una función con un tipo de retorno no declarado, declare el tipo: " + nombre_tipo);
+		}
+		RESULT = nombre_tipo;
+	:} 
+	| tipovector:entvsbool
+	{:
+		//Aquí se está decidiendo si se el tipo es entero o booleano aunque no lo parezca.
+		//Simplemento lo devuelvo (es String)
+		RESULT = entvsbool;	
+	:};
+procedimiento ::= 
+	COMIENZOPROCEDIMIENTO IDEN:id
+	{:
+		String nombre_procedimiento = ((TokenIF) id).getLexema();
+
+		//Guardo el procedimiento en el scope actual.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		SymbolProcedure procedimiento = new SymbolProcedure(scope, nombre_procedimiento, null);
+		syTable.addSymbol(procedimiento);
+
+		//Creo un scope nuevo para añadir la información del procedimiento.
+		scopeManager.openScope(nombre_procedimiento);
+		System.out.println("Empezando a analizar procedimiento: " + nombre_procedimiento);
+	:}
+	PIZQUIERDO defvariables PDERECHO DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO sentencia listaSentencias  FINBLOQUESENTENCIAS DSENTENCIAS 
+	{:
+		System.out.println("Procedimiento analizado correctamente");
+		scopeManager.closeScope();
+	:};
+funcion ::= DECLAREFUNCION IDEN:id
+	{:
+		//Abro una nueva scope para añadir la información de la función.
+		String nombre_funcion = ((TokenIF) id).getLexema();
+		scopeManager.openScope(nombre_funcion);
+		System.out.println("Empezando a analizar funcion: " + nombre_funcion);
+		
+	:} 
+	PIZQUIERDO defvariables PDERECHO DELIMFUNC tiporetornofuncion:retorno 
+	{:
+		//Busco la scope del programa que lo engloba (la scope padre) y añado la función a su tabla de símbolos.
+		ScopeIF scope = scopeManager.getParentScope();
+		SymbolTableIF syTable = scope.getSymbolTable();
+		SymbolFunction funcion = new SymbolFunction(scope, ((TokenIF) id).getLexema(), (TypeIF) scopeManager.searchType((String) retorno));
+		syTable.addSymbol(funcion);	
+		
+	:}
+	DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO sentenciaFuncion listaSentenciasFuncion FINBLOQUESENTENCIAS DSENTENCIAS
+	{:
+		//Obtengo el devolver declarado en la función.
+		//Compruebo que se ha producido un devolver correcto.
+		if(!SymbolFunction.getDevolverDeclarado()){
+			throw new RuntimeException("No se ha explicitado un devolver en la función: " + ((TokenIF) id).getLexema());
+		} else if(!SymbolFunction.comprobarTiposDevolver((String) retorno)){
+			SymbolFunction.clearTiposDevolver();
+			throw new RuntimeException("Al menos un tipo devolver explicitado en la función " + ((TokenIF) id).getLexema() + " no es del tipo declarado: " + (String) retorno);
+		} else
+			//Reseteo los tipos devolver para futuras funciones.
+			SymbolFunction.clearTiposDevolver();
+
+		//Lo seteo a false para comprobar siguientes funciones.
+		SymbolFunction.setDevolverDeclarado(false);
+
+		System.out.println("Función analizada correctamente");
+		scopeManager.closeScope();
+	:};
 selectorpof ::= procedimiento | funcion ;
 defsubprograma ::=selectorpof  defsubprograma | epsilon ;
-seccionsubprograma ::=COMIENZOSUBPROGRAMAS  defsubprograma  | epsilon ;
+seccionsubprograma ::=COMIENZOSUBPROGRAMAS  
+	{:
+		System.out.println("Iniciando análisis de subprogramas");
+	:}
+	defsubprograma  | epsilon ;
 
 // Definición de programa principal
-defprincipal ::= COMIENZOPROGRAMA IDEN DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO listaSentencias FINBLOQUESENTENCIAS FINPROGRAMA ;
+defprincipal ::= COMIENZOPROGRAMA IDEN DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO listaSentencias FINBLOQUESENTENCIAS FINPROGRAMA 
+	{:
+		scopeManager.closeScope();
+	:};
 
 expresion ::=  
 	expresion:vi MENORQUE  expresion:vd
@@ -569,6 +664,10 @@ expresion ::=
 		ScopeIF scope = scopeManager.getCurrentScope();
 		SymbolTableIF syTable = scope.getSymbolTable();
 		String lexema = ((TokenIF) f).getLexema();
+		//Compruebo que no es un procedimiento pues no puede ser parte de una expresión.
+		if(f instanceof SymbolProcedure){
+			throw new RuntimeException("No está permitido el uso de procedimientos como parte de una expresión.");
+		}
 		SymbolFunction funcion;
 		//Compruebo y obtengo la función de la tabla de símbolos.
 		if(scopeManager.containsSymbol(lexema)){
@@ -578,7 +677,7 @@ expresion ::=
 			throw new RuntimeException("No existe ninguna función con nombre " + lexema);
 		Expresion primitiva;
 		//Según el tipo de la función creo un tipo de expresión u otra.
-		switch(funcion.getReturn()){
+		switch(funcion.getReturn().getName()){
 			case "entero":
 				//Creo una PrimitivaAritmetica.
 				primitiva = new PrimitivaAritmetica(null,null,null);
@@ -715,7 +814,8 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:rango CDERECHO
 			vector = scopeManager.searchSymbol(nombre_vector);
 			//Compruebo que no se haya pasado de dimensión el rango proporcionado (>=).
 			if((int) rango >= ((TypeArray) vector.getType()).getRango()){
-				throw new RuntimeException("Intento de acceso al array " + nombre_vector + " fuera de rango, su tamaño es " + ((TypeArray) vector.getType()).getRango() + " y se trata de acceder al miembro " + (int) rango);
+				throw new RuntimeException("Intento de acceso al array " + nombre_vector + " fuera de rango, su tamaño es " + ((TypeArray) vector.getType())
+.getRango() + " y se trata de acceder al miembro " + (int) rango);
 			}
 			tipo_array = (TypeArray) scopeManager.searchSymbol(nombre_vector).getType();
 		} else
@@ -757,6 +857,7 @@ parteizquierdaasignacion ::=
 		//Compruebo y obtengo el sombolo del identificador.
 		if(scopeManager.containsSymbol(lexema)){
 			identificador = scopeManager.searchSymbol(((TokenIF) id).getLexema());
+			System.out.println(identificador);
 			System.out.println("Variable encontrada en la tabla de símbolos de tipo: " + identificador.getType().getName());
 			//Si es una contante lo que hay en la parte izquierda; no está permitido. 
 			if(identificador instanceof SymbolConstant){
@@ -821,17 +922,17 @@ parametroasignacion ::= expresion:ex
 		RESULT = ex;
 	:};
 
-// llamada a función
-parametrofuncionoproc ::=     listavariables ;
-llamadafuncion ::= IDEN PIZQUIERDO parametrofuncionoproc PDERECHO;  
-sentenciallamadafuncion ::= llamadafuncion DSENTENCIAS;
-
 
 // Sentencias
 sentencia ::= sentenciadeasignacion | sentenciaif | sentenciafor | sentenciaEscribir | sentenciallamadafuncion ;
 sentenciaFuncion ::= sentenciadeasignacion | sentenciaifFuncion | sentenciaforFuncion | sentenciaEscribir | sentenciallamadafuncion | sentenciaDevolver;
 listaSentencias ::= sentencia  listaSentencias | epsilon;
 listaSentenciasFuncion ::= sentenciaFuncion listaSentenciasFuncion | epsilon;
+
+// llamada a función
+parametrofuncionoproc ::=     listavariables ;
+llamadafuncion ::= IDEN PIZQUIERDO parametrofuncionoproc PDERECHO;  
+sentenciallamadafuncion ::= llamadafuncion DSENTENCIAS;
 
 // if
 sentenciaif ::= COMIENZOSI expresion  STARTIF DELIMFUNC listaSentencias rellenoif  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS ;
@@ -849,7 +950,15 @@ parametroEscribir ::= STRING | expresion | epsilon ;
 sentenciaEscribir ::= ESCRIBIR PIZQUIERDO parametroEscribir PDERECHO DSENTENCIAS;
 
 // devolver
-sentenciaDevolver ::= FRETURN expresion DSENTENCIAS;
+sentenciaDevolver ::= 
+	FRETURN expresion:exp DSENTENCIAS
+	{:
+		//¿¿HAY QUE ASEGURARSE QUE SE VAYA A EJECUTAR UN DEVOLVER EN CADA IF,ETC??
+		String tipo = ((Expresion) exp).getType();
+		System.out.println("LLegada a sentencia devolver de tipo: " + ((Expresion) exp).getType());
+		SymbolFunction.addTipoDevolver(tipo);
+		SymbolFunction.setDevolverDeclarado(true);
+	:};
 
 
 
