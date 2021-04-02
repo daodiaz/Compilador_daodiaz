@@ -14,7 +14,7 @@ import es.uned.lsi.compiler.semantic.type.TypeIF;
 public class SymbolParameter
     extends SymbolBase
 {  
-   
+	 private boolean valvsref;
     /**
      * Constructor for SymbolParameter.
      * @param scope The declaration scope.
@@ -27,4 +27,8 @@ public class SymbolParameter
     {
         super (scope, name, type);
     } 
+    
+    public void setValVSRef(boolean bandera) {
+    	valvsref = bandera;
+    }
 }

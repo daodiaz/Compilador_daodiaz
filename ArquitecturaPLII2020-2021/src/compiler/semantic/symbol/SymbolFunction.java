@@ -1,8 +1,10 @@
 package compiler.semantic.symbol;
 
 import java.util.ArrayList;
+import java.util.Queue;
 
 import es.uned.lsi.compiler.semantic.ScopeIF;
+import es.uned.lsi.compiler.semantic.symbol.SymbolIF;
 import es.uned.lsi.compiler.semantic.type.TypeIF;
 
 /**
@@ -19,6 +21,7 @@ public class SymbolFunction
     private String value;
     private static boolean devolver_declarado;
     private static ArrayList<String> tipos_devolver = new ArrayList<String>();
+    private ArrayList<SymbolIF> parametros;
       
     /**
      * Constructor for SymbolFunction.
@@ -77,4 +80,11 @@ public class SymbolFunction
     	tipos_devolver.clear();
     }
     
+    public void setParametros(ArrayList<SymbolIF> parametros) {
+    	this.parametros = parametros;
+    }
+    
+    public ArrayList<SymbolIF> getParametros(){
+    	return parametros;
+    }
 }

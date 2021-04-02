@@ -18,9 +18,12 @@ programa uno:
  				suma = a + b;
 				a = a + 2;
 				b = b * 2;
+				x = 3;
 				devolver suma;
 			fin;
 	comienzo
 		x = 2 + 3;
 		h[0] = 3;
+		ejFuncion(x,2);
+		ejemplo(1);
 	fin.

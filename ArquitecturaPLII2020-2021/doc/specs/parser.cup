@@ -397,13 +397,25 @@ tipovariable ::=
 		RESULT = ((TokenIF) id).getLexema();
 	:};
 selectorvalororeferencia ::=  
-	IDEN:id
+	expresion:exp
 	{:
-		System.out.println("Obteniedno lexema de declaración de variable: " + ((TokenIF) id).getLexema());
-		String lexema = ((TokenIF) id).getLexema();
-		//Creo el parámetro.
-		Parametro parametro = new Parametro(lexema, false);
-		RESULT = parametro;
+		//PENDIENTE CAMBIAR PRIMITIVA PARA GUARDAR LEXEMA EN CASO DE SER ID, CREAR PARAMETRO A TRAVES DE ESE ID EN EL CASO DE QUE LA EXPRESION SEA UNA PRIMITIVA DE ID, SINO NULL y CRIBAR EN LLAMADA A FUNCION SI ES NULL.
+		//System.out.println("Obteniedno lexema de declaración de variable: " + ((TokenIF) id).getLexema());
+		Parametro parametro;
+		//Compruebo el tipo de expresión que se me devuelve.
+		//Si es una expresion aritmetica estamos ante un parametro de llamada a función de tipo entero
+		if(exp instanceof PrimitivaAritmetica || exp instanceof ExpresionAritmetica){
+			parametro = new Parametro("entero");		
+			RESULT = parametro;
+		} else if (exp instanceof PrimitivaLogica || exp instanceof ExpresionLogica) {
+			parametro = new Parametro("boolean");
+			RESULT = parametro;
+		//En caso de que estemos ante un Parametro es posible que estemos en una declaración de una línea. Devuelvo el parámetro.
+		} else if(exp instanceof Parametro){
+			RESULT = exp;
+		} else {
+			throw new RuntimeException("Sólo se pueden utilizar como parámetros o variables enteros o tipos lógicos, actualmente: " + exp.getClass().getSimpleName());	
+		}
 	:}
 	|	PARAMETROVALOR IDEN:id
 	{:
@@ -431,17 +443,20 @@ defvariables ::=
 		//Limpio la lista de variables de la línea anterior.
 		ListaVariables.clearVariables();
 	:} 
-	listavariables:lista DELIMFUNC tipovariable:tipo puntoycomaopcional {:
+	listavariables:lista DELIMFUNC tipovariable:tipo puntoycomaopcional:puntocoma {:
 		System.out.println("Analizando una línea de declaración de variables");
 		//Obtengo el escope y la tabla de simbolos y de tipòs.
 		ScopeIF scope = scopeManager.getCurrentScope();
 		SymbolTableIF syTable = scope.getSymbolTable();
 		TypeTableIF tyTable = scope.getTypeTable();
 		//Obtengo los nombres de las variables en declaración en esta línea.
-		ArrayList<Parametro> parametros = ListaVariables.getVariables();
+		ArrayList<Parametro> elementos = ListaVariables.getVariables();
 		//Según el nombre del tipo guardo el tipo.
 		TypeIF tipe;
+		//Cola de variables declaradas, usado solo al analizar paramteros de funciones.
+		ArrayList<SymbolIF> variables = new ArrayList<SymbolIF>();
 		boolean vector = false;
+		System.out.println("Analizando tipo de linea de declaración de variables: " + tipo + " de longitud: " + elementos.size());
 		switch((String) tipo){
 			case "entero":
 				//En el caso de que el tipo no se haya declarado antes, lo añado a la tabla de tipos.
@@ -471,24 +486,57 @@ defvariables ::=
 				break;
 		}
 		//Creo un símbolo para cada una de ellas según su tipo y nombre y la añado a la tabla de símbolos.
-		for(Parametro parametro : parametros){
-			String nombre_variable = parametro.getNombre();
-			if(syTable.containsSymbol(nombre_variable)){
-				throw new RuntimeException("Ya existe una variable en este ámbito con el mismo nombre: " + nombre_variable);
+		for(Parametro elemento : elementos){
+			if(elemento.getNombre() == null)
+				throw new RuntimeException("Error al extraer lexema de identificador en linea de declaración de variables");
+			String nombre_variable = elemento.getNombre();
+			if((boolean) puntocoma){
+				if(syTable.containsSymbol(nombre_variable)){
+					throw new RuntimeException("Ya existe una variable en este ámbito con el mismo nombre: " + nombre_variable);
+				}
+				SymbolVariable variable = new SymbolVariable(scope, nombre_variable, tipe);
+				//Si la variable declarada ha tenido un var precediendole entonces es por referencia y le seteo dicha información.
+				if(elemento.getValVSRef() || vector){
+					variable.setValVSRef(true);			
+				}
+				//Añado la variable a la cola de variables.
+				variables.add(variable);
+				System.out.println("Variable declarada con nombre " + nombre_variable + " y tipo " + tipe.getName());
+				syTable.addSymbol(nombre_variable, variable);
+			} else {
+				//En este caso estamos hablando de una declaración de parametros dentro de una declaración de función.
+				SymbolParameter parametro = new SymbolParameter(scope, nombre_variable, tipe);	
+				//Si la variable declarada ha tenido un var precediendole entonces es por referencia y le seteo dicha información.
+				if(elemento.getValVSRef() || vector){
+					parametro.setValVSRef(true);			
+				}
+				System.out.println("Parametro de la funcion analizado: " + nombre_variable);
+				//Añado el parametro a la lista de variables.
+				variables.add(parametro);
 			}
-			SymbolVariable variable = new SymbolVariable(scope, nombre_variable, tipe);
-			//Si la variable declarada ha tenido un var precediendole entonces es por referencia y le seteo dicha información.
-			if(parametro.getValVSRef() || vector){
-				variable.setValVSRef(true);			
-			}
-			System.out.println("Variable declarada con nombre " + nombre_variable + " y tipo " + tipe.getName());
-			syTable.addSymbol(nombre_variable, variable);
 		}
+		//Devuelvo la cola de variables (para funciones).
+		if(!((boolean)puntocoma))
+			RESULT = variables;
 	:} defvariables 
 	| epsilon; 
 
-seccionvariables ::= DECLVARIABLES defvariables | epsilon;
-puntoycomaopcional ::= DSENTENCIAS | epsilon;
+seccionvariables ::= 
+	DECLVARIABLES defvariables
+	{:	
+		//Limipio la lista de variables de nuevo.
+		ListaVariables.clearVariables();
+	:}
+	| epsilon;
+puntoycomaopcional ::= 
+	DSENTENCIAS
+	{:
+		RESULT = true;	
+	:}
+	| epsilon
+	{:
+		RESULT = false;
+	:};
 
 //reglas de subprogramas
 tiporetornofuncion ::= 
@@ -511,18 +559,35 @@ procedimiento ::=
 	COMIENZOPROCEDIMIENTO IDEN:id
 	{:
 		String nombre_procedimiento = ((TokenIF) id).getLexema();
-
-		//Guardo el procedimiento en el scope actual.
-		ScopeIF scope = scopeManager.getCurrentScope();
-		SymbolTableIF syTable = scope.getSymbolTable();
-		SymbolProcedure procedimiento = new SymbolProcedure(scope, nombre_procedimiento, null);
-		syTable.addSymbol(procedimiento);
-
 		//Creo un scope nuevo para añadir la información del procedimiento.
 		scopeManager.openScope(nombre_procedimiento);
 		System.out.println("Empezando a analizar procedimiento: " + nombre_procedimiento);
 	:}
-	PIZQUIERDO defvariables PDERECHO DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO sentencia listaSentencias  FINBLOQUESENTENCIAS DSENTENCIAS 
+	PIZQUIERDO defvariables:parametros
+	{:
+		//Obtengo la scope actual.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		//Obtengo la tabla de simbolos actual.
+		SymbolTableIF syTable = scope.getSymbolTable();
+		//Guardo los paramteros declarados en la tabla actual.
+		for(SymbolParameter parametro : (ArrayList<SymbolParameter>) parametros) {
+			//Los añado a la tabla de simbolos
+			syTable.addSymbol(parametro);
+		}
+
+		System.out.println("Parametros del procedimiento " + ((TokenIF) id).getLexema() + "añadidos a la tabla de simbolos");
+		//Guardo el procedimiento en el scope padre.
+		scope = scopeManager.getParentScope();
+		syTable = scope.getSymbolTable();
+		SymbolProcedure procedimiento = new SymbolProcedure(scope, ((TokenIF) id).getLexema(), null);
+		
+		//Añado los parametros de la funcion.
+		procedimiento.setParametros((ArrayList<SymbolIF>) parametros);
+		
+		//La añado a la tabla de símbolos.
+		syTable.addSymbol(procedimiento);	
+	:}
+	PDERECHO DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO sentencia listaSentencias  FINBLOQUESENTENCIAS DSENTENCIAS 
 	{:
 		System.out.println("Procedimiento analizado correctamente");
 		scopeManager.closeScope();
@@ -535,13 +600,31 @@ funcion ::= DECLAREFUNCION IDEN:id
 		System.out.println("Empezando a analizar funcion: " + nombre_funcion);
 		
 	:} 
-	PIZQUIERDO defvariables PDERECHO DELIMFUNC tiporetornofuncion:retorno 
+	PIZQUIERDO defvariables:parametros PDERECHO DELIMFUNC tiporetornofuncion:retorno 
 	{:
-		//Busco la scope del programa que lo engloba (la scope padre) y añado la función a su tabla de símbolos.
-		ScopeIF scope = scopeManager.getParentScope();
+		
+		//Obtengo la scope actual.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		//Obtengo la tabla de simbolos actual.
 		SymbolTableIF syTable = scope.getSymbolTable();
+		//Guardo los paramteros declarados en la tabla actual.
+		for(SymbolParameter parametro : (ArrayList<SymbolParameter>) parametros) {
+			//Los añado a la tabla de simbolos
+			syTable.addSymbol(parametro);
+		}
+		System.out.println("Parametros de la funcion " + ((TokenIF) id).getLexema() + "añadidos a la tabla de simbolos");
+
+		//Busco la scope del programa que lo engloba (la scope padre) y añado la función a su tabla de símbolos.
+		scope = scopeManager.getParentScope();
+		syTable = scope.getSymbolTable();
 		SymbolFunction funcion = new SymbolFunction(scope, ((TokenIF) id).getLexema(), (TypeIF) scopeManager.searchType((String) retorno));
+
+		//Añado los parametros de la funcion.
+		funcion.setParametros((ArrayList<SymbolIF>) parametros);
+		
+		//La añado a la tabla de símbolos.
 		syTable.addSymbol(funcion);	
+		System.out.println("Funcion añadida a la tabla de simbolos: " + ((TokenIF) id).getLexema());
 		
 	:}
 	DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO sentenciaFuncion listaSentenciasFuncion FINBLOQUESENTENCIAS DSENTENCIAS
@@ -611,52 +694,75 @@ expresion ::=
 		SymbolIF identificador;
 		//Compruebo y obtengo el sombolo del identificador.
 		if(scopeManager.containsSymbol(lexema)){
+			System.out.println("Identificador encontrado: " + ((TokenIF) id).getLexema());
 			identificador = scopeManager.searchSymbol(((TokenIF) id).getLexema());
+			//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser parte de una expresión.
+			Expresion primitiva;
+			switch(identificador.getClass().getSimpleName()){
+				case "SymbolConstant":
+					if(identificador.getType().getName().equals("entero")){
+						//Creo la primitiva en el caso de que el tipo de la constante sea entera.
+						primitiva = new PrimitivaAritmetica(null,null,null);
+						//primitiva.setValor(Integer.parseInt(identificador.getValue()));
+						//Añado el nombre del identificador a la primitiva.
+						((PrimitivaAritmetica) primitiva).setNombre(lexema);
+						RESULT = primitiva;
+					}
+					else if(identificador.getType().getName().equals("boolean")){
+						//HAY QUE IMPLEMENTAR getValue() en simbolos constantes.
+						primitiva = new PrimitivaLogica(null,null,null);
+						//primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
+						((PrimitivaLogica) primitiva).setNombre(lexema);
+						RESULT = primitiva;
+					}
+					else
+						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros.");
+					break;
+				case "SymbolParameter":
+					if(identificador.getType().getName().equals("entero")){
+						//Creo la primitiva en el caso de que el tipo de la constante sea entera.
+						primitiva = new PrimitivaAritmetica(null,null,null); 
+						//primitiva.setValor(Integer.parseInt(identificador.getValue()));
+						((PrimitivaAritmetica) primitiva).setNombre(lexema);
+						RESULT = primitiva;
+					}
+					else if(identificador.getType().getName().equals("boolean")){
+						//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
+						primitiva = new PrimitivaLogica(null,null,null);
+						//primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
+						((PrimitivaLogica) primitiva).setNombre(lexema);
+						RESULT = primitiva;
+					} 
+					else
+						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
+					break;
+				case "SymbolVariable":
+					if(identificador.getType().getName().equals("entero")){
+						//Creo la primitiva en el caso de que el tipo de la constante sea entera.
+						primitiva = new PrimitivaAritmetica(null,null,null); 
+						//primitiva.setValor(Integer.parseInt(identificador.getValue()));
+						((PrimitivaAritmetica) primitiva).setNombre(lexema);
+						RESULT = primitiva;
+					}
+					else if(identificador.getType().getName().equals("boolean")){
+						//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
+						primitiva = new PrimitivaLogica(null,null,null);
+						//primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
+						((PrimitivaLogica) primitiva).setNombre(lexema);
+						RESULT = primitiva;
+					} 
+					else
+						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
+					break;
+				default:
+					throw new RuntimeException("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión.");
+			}			
 		}
-		else
-			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
-		//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser parte de una expresión.
-		Expresion primitiva;
-		switch(identificador.getClass().getSimpleName()){
-			case "SymbolConstant":
-				if(identificador.getType().getName().equals("entero")){
-					//Creo la primitiva en el caso de que el tipo de la constante sea entera.
-					primitiva = new PrimitivaAritmetica(null,null,null);
-					//primitiva.setValor(Integer.parseInt(identificador.getValue()));
-					RESULT = primitiva;
-				}
-				else if(identificador.getType().getName().equals("boolean")){
-					//HAY QUE IMPLEMENTAR getValue() en simbolos constantes.
-					primitiva = new PrimitivaLogica(null,null,null);
-					//primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
-					RESULT = primitiva;
-				}
-				else
-					throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros.");
-				break;
-			case "SymbolParameter":
-				//TODO hasta que tenga aclarado qué es este tipo de símbolo
-				break;
-			case "SymbolVariable":
-				if(identificador.getType().getName().equals("entero")){
-					//Creo la primitiva en el caso de que el tipo de la constante sea entera.
-					//Creo la primitiva en el caso de que el tipo de la constante sea entera.
-					primitiva = new PrimitivaAritmetica(null,null,null); 
-					//primitiva.setValor(Integer.parseInt(identificador.getValue()));
-					RESULT = primitiva;
-				}
-				else if(identificador.getType().getName().equals("boolean")){
-					//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
-					primitiva = new PrimitivaLogica(null,null,null);
-					//primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
-					RESULT = primitiva;
-				} 
-				else
-					throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
-				break;
-			default:
-				throw new RuntimeException("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión.");
-		}			
+		else {
+			//Puede que sea un identificador que se esté declarando justamente ahora.
+			Parametro parametro = new Parametro(lexema, false);
+			RESULT = parametro;
+		}
 	:}
 	| llamadafuncion:f
 	{:
@@ -866,8 +972,8 @@ parteizquierdaasignacion ::=
 		}
 		else
 			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
-		//Compruebo si el identificador corresponde a una variable.
-		if(identificador.getClass().getSimpleName().equals("SymbolVariable")){
+		//Compruebo si el identificador corresponde a una variable o a un parámetro (que se comporta como una variable especial en este caso).
+		if(identificador.getClass().getSimpleName().equals("SymbolVariable") || identificador.getClass().getSimpleName().equals("SymbolParameter")){
 			RESULT = identificador;
 		} else
 			throw new RuntimeException("No se puede utilizar en una sentencia de asignación un símbolo de tipo: " + identificador.getClass().getName());
@@ -898,6 +1004,9 @@ parteizquierdaasignacion ::=
 sentenciadeasignacion ::= parteizquierdaasignacion:pi ASIGNACION parametroasignacion:pd DSENTENCIAS
 	{:
 		System.out.println("Empezando a analizar asignación");
+		if(pd instanceof Parametro){
+			throw new RuntimeException("El identificador no se ha encontrado en la tabla de simbolos: " + ((Parametro)pd).getNombre());
+		}
 		System.out.println("El tipo de la expresión derecha es: " + ((Expresion) pd).getType());
 		//Compruebo si concuerdan los tipos de la parte izquierda y derecha y qué tipòs son, según sea seteo la SentenciaAsignacion.
 		if(( ((SymbolIF) pi).getType().getName().equals("entero") && ((Expresion) pd).getType().equals("entero"))){
@@ -931,28 +1040,209 @@ listaSentenciasFuncion ::= sentenciaFuncion listaSentenciasFuncion | epsilon;
 
 // llamada a función
 parametrofuncionoproc ::=     listavariables ;
-llamadafuncion ::= IDEN PIZQUIERDO parametrofuncionoproc PDERECHO;  
-sentenciallamadafuncion ::= llamadafuncion DSENTENCIAS;
+llamadafuncion ::= 
+	IDEN:id 
+	{:	
+		//Limipio la lista de variables de nuevo.
+		ListaVariables.clearVariables();
+	:}
+	PIZQUIERDO parametrofuncionoproc PDERECHO
+	{:
+		//Obtengo la función o procedimiento si existe.
+		System.out.println("Iniciando analisis llamada a funcion: " + ((TokenIF) id).getLexema());
+		String nombre = ((TokenIF) id).getLexema();
+		if(scopeManager.containsSymbol(nombre)){
+			SymbolIF simbolo = scopeManager.searchSymbol(nombre);
+			//Compruebo que los parámetros sean en número, orden y tipo correctos.
+			if(simbolo instanceof SymbolFunction){
+				ArrayList<SymbolIF> parametros = ((SymbolFunction) simbolo).getParametros();
+				System.out.println("Obtenidos sus parametros: " + parametros.size());
+				if(parametros.size() == ListaVariables.getVariables().size()){
+					System.out.println("Parametros iguales a los esperados: " + ListaVariables.getVariables().size());
+					Iterator<SymbolIF> itdecl = parametros.iterator();
+					Iterator<Parametro>  itpar= ListaVariables.getVariables().iterator();
+					while(itpar.hasNext() && itdecl.hasNext()){
+						//Obtengo el nombre siguiente del parametro declarado.
+						Parametro parametro = itpar.next();
+						String nombre_parametro = parametro.getNombre();
+						String tipo_declarado = itdecl.next().getType().getName();
+						String tipo_parametro;
+						//Si el nombre del paramtero es null y tiene un tipo seteado, el tipo de paramtero lo obtengo directamente.
+						if(nombre_parametro == null && parametro.getTipo() != null){
+							tipo_parametro = parametro.getTipo();
+						//Sino compruebo que exista el simbolo con el nombre del parametro obtenido
+						} else if(nombre_parametro != null && !scopeManager.containsSymbol(nombre_parametro)){
+							throw new RuntimeException("No se ha encontrado el simbolo que corresponde al nombre del parametro: " + nombre_parametro);
+						//En tal caso obtengo su tipo
+						} else if (nombre_parametro != null && scopeManager.containsSymbol(nombre_parametro)){
+							tipo_parametro = scopeManager.searchSymbol(nombre_parametro).getType().getName();
+						} else
+							throw new RuntimeException("No se ha indicado correctamente el parametro en la llamada a función");
+						//Y ya puedo comprobar si los tipos concuerdan. 
+						if(!tipo_declarado.equals(tipo_parametro)){
+							throw new RuntimeException("El tipo del parametro no se corresponde con el esperado: " + tipo_parametro + " encontrado y " + tipo_declarado  + " esperado");
+						}
+					}
+					System.out.println("Tipos de los parametros son los esperados");
+				} else
+					throw new RuntimeException("No se han declarado los suficientes parametros en la llamada a funcion: " + parametros.size() + " esperados y " + ListaVariables.getVariables().size() + " obtenidos");
+			} else if (simbolo instanceof SymbolProcedure){
+				ArrayList<SymbolIF> parametros = ((SymbolProcedure) simbolo).getParametros();
+				System.out.println("Obtenidos sus parametros: " + parametros.size());
+				if(parametros.size() == ListaVariables.getVariables().size()){
+					System.out.println("Parametros iguales a los esperados: " + ListaVariables.getVariables().size());
+					Iterator<SymbolIF> itdecl = parametros.iterator();
+					Iterator<Parametro>  itpar= ListaVariables.getVariables().iterator();
+					while(itpar.hasNext() && itdecl.hasNext()){
+						//Obtengo el nombre siguiente del parametro declarado.
+						Parametro parametro = itpar.next();
+						String nombre_parametro = parametro.getNombre();
+						String tipo_declarado = itdecl.next().getType().getName();
+						String tipo_parametro;
+						//Si el nombre del paramtero es null y tiene un tipo seteado, el tipo de paramtero lo obtengo directamente.
+						if(nombre_parametro == null && parametro.getTipo() != null){
+							tipo_parametro = parametro.getTipo();
+						//Sino compruebo que exista el simbolo con el nombre del parametro obtenido
+						} else if(nombre_parametro != null && !scopeManager.containsSymbol(nombre_parametro)){
+							throw new RuntimeException("No se ha encontrado el simbolo que corresponde al nombre del parametro: " + nombre_parametro);
+						//En tal caso obtengo su tipo
+						} else if (nombre_parametro != null && scopeManager.containsSymbol(nombre_parametro)){
+							tipo_parametro = scopeManager.searchSymbol(nombre_parametro).getType().getName();
+						} else
+							throw new RuntimeException("No se ha indicado correctamente el parametro en la llamada a procedimiento");
+						//Y ya puedo comprobar si los tipos concuerdan. 
+						if(!tipo_declarado.equals(tipo_parametro)){
+							throw new RuntimeException("El tipo del parametro no se corresponde con el esperado: " + tipo_parametro + " encontrado y " + tipo_declarado  + " esperado");
+						}
+					}
+					System.out.println("Tipos de los parametros son los esperados");
+				} else
+					throw new RuntimeException("No se han declarado los suficientes parametros en la llamada a procedimiento: " + parametros.size() + " esperados y " + ListaVariables.getVariables().size() + " obtenidos");
+			} else 
+				throw new RuntimeException("No se ha encontrado declarada una función procedimiento con el nombre: " + nombre);
+			RESULT = simbolo;
+		} else
+			throw new RuntimeException("No se ha encontrado declarada una función procedimiento con el nombre: " + nombre);
+		
+		//Limipio la lista de variables de nuevo.
+		ListaVariables.clearVariables();
+	:};   
+sentenciallamadafuncion ::= llamadafuncion:funcvsproc DSENTENCIAS
+	{:
+		//Compruebo que sea un procedimiento, en otro caso devuelvo error.
+		if(!(funcvsproc instanceof SymbolProcedure)){
+			throw new RuntimeException("No se puede utilizar una llamada a función como sentencia, sólo procedimientos");
+		}
+	:};
 
 // if
-sentenciaif ::= COMIENZOSI expresion  STARTIF DELIMFUNC listaSentencias rellenoif  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS ;
-sentenciaifFuncion ::= COMIENZOSI expresion  STARTIF DELIMFUNC listaSentenciasFuncion rellenoifFuncion  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS ;
+sentenciaif ::= 
+	COMIENZOSI expresion:exp
+	{:
+		//Compruebo que la expresión sea de tipo lógica
+		Expresion expresion = (Expresion) exp;
+		if(!(expresion instanceof ExpresionLogica || expresion instanceof PrimitivaLogica)){
+			throw new RuntimeException("No se puede establecer como condición de una sentencia condicional una expresión de tipo (sólo lógica): " + expresion.getClass().getSimpleName());
+		}
+	:} 
+	STARTIF DELIMFUNC listaSentencias rellenoif  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS ;
+sentenciaifFuncion ::= 
+	COMIENZOSI expresion:exp
+	{:
+		//Compruebo que la expresión sea de tipo lógica
+		Expresion expresion = (Expresion) exp;
+		if(!(expresion instanceof ExpresionLogica || expresion instanceof PrimitivaLogica)){
+			throw new RuntimeException("No se puede establecer como condición de una sentencia condicional una expresión de tipo (sólo lógica): " + expresion.getClass().getSimpleName());
+		}
+	:}  
+	STARTIF DELIMFUNC listaSentenciasFuncion rellenoifFuncion  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS;
 rellenoifFuncion ::=  ALTERNATIVASI DELIMFUNC  listaSentenciasFuncion | epsilon ;
 rellenoif ::=  ALTERNATIVASI DELIMFUNC  listaSentencias | epsilon ;
 
 // for 
-sentenciafor ::= COMIENZOBUCLEPARA IDEN RANGOBUCLEPARA expresion RANGO expresion DELIMFUNC listaSentencias FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS;
-sentenciaforFuncion ::= COMIENZOBUCLEPARA IDEN RANGOBUCLEPARA expresion RANGO expresion DELIMFUNC listaSentenciasFuncion FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS;
+sentenciafor ::= 
+	COMIENZOBUCLEPARA IDEN:id
+	{:
+		//Compruebo que el identificador corresponda con una variable entera.
+		String nombre_identificador = ((TokenIF) id).getLexema();
+		SymbolIF variable;
+		if(scopeManager.containsSymbol(nombre_identificador)){
+			variable = scopeManager.searchSymbol(nombre_identificador);
+			if(!(variable instanceof SymbolVariable)){
+				throw new RuntimeException("Sólo se puede utilizar como variable una variable, actualmente: " + variable.getClass().getSimpleName());
+			}
+		} else
+			throw new RuntimeException("No se ha encontrado declarado el símbolo: " + nombre_identificador);
+	:}
+	RANGOBUCLEPARA expresion:rango_inf RANGO expresion:rango_sup
+	{:
+		if(rango_inf instanceof Parametro)
+			throw new RuntimeException("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_inf).getNombre());
+		if(rango_sup instanceof Parametro)
+			throw new RuntimeException("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_sup).getNombre());
+
+		Expresion inferior = (Expresion) rango_inf;
+		Expresion superior = (Expresion) rango_sup;
+		//Compruebo que las expresiones sean de tipo aritméticas
+		if(!((inferior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica) && (superior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica)))
+			throw new RuntimeException("Las expresiones que conformar los rangos deben de ser aritméticas, actualmente: " + inferior.getClass().getSimpleName() + " (rango inferior) y " + superior.getClass().getSimpleName() + " (rango superior)");
+	:}
+	DELIMFUNC listaSentencias FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS;
+sentenciaforFuncion ::= 
+	COMIENZOBUCLEPARA IDEN:id
+	{:
+		//Compruebo que el identificador corresponda con una variable entera.
+		String nombre_identificador = ((TokenIF) id).getLexema();
+		SymbolIF variable;
+		if(scopeManager.containsSymbol(nombre_identificador)){
+			variable = scopeManager.searchSymbol(nombre_identificador);
+			if(!(variable instanceof SymbolVariable)){
+				throw new RuntimeException("Sólo se puede utilizar como variable una variable, actualmente: " + variable.getClass().getSimpleName());
+			}
+		} else
+			throw new RuntimeException("No se ha encontrado declarado el símbolo: " + nombre_identificador);
+	:}
+	RANGOBUCLEPARA expresion:rango_inf RANGO expresion:rango_sup
+	{:
+		if(rango_inf instanceof Parametro)
+			throw new RuntimeException("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_inf).getNombre());
+		if(rango_sup instanceof Parametro)
+			throw new RuntimeException("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_sup).getNombre());
+
+		Expresion inferior = (Expresion) rango_inf;
+		Expresion superior = (Expresion) rango_sup;
+		//Compruebo que las expresiones sean de tipo aritméticas
+		if(!((inferior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica) && (superior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica)))
+			throw new RuntimeException("Las expresiones que conformar los rangos deben de ser aritméticas, actualmente: " + inferior.getClass().getSimpleName() + " (rango inferior) y " + superior.getClass().getSimpleName() + " (rango superior)");
+	:} 
+	DELIMFUNC listaSentenciasFuncion FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS;
 
 
 // escribir. 
-parametroEscribir ::= STRING | expresion | epsilon ;
-sentenciaEscribir ::= ESCRIBIR PIZQUIERDO parametroEscribir PDERECHO DSENTENCIAS;
+parametroEscribir ::= 
+	STRING 
+	| expresion:exp
+	{:
+		//Compruebo que la expresión sea de tipo lógica
+		Expresion expresion = (Expresion) exp;
+		if(!(expresion instanceof ExpresionAritmetica || expresion instanceof PrimitivaAritmetica)){
+			throw new RuntimeException("No se puede establecer como parámetro de salida una expresión de tipo (śolo entera): " + expresion.getClass().getSimpleName());
+		}
+	:} 
+	| epsilon ;
+sentenciaEscribir ::= 
+	ESCRIBIR PIZQUIERDO parametroEscribir:tipo
+	{:
+		
+	:} 
+	PDERECHO DSENTENCIAS;
 
 // devolver
 sentenciaDevolver ::= 
 	FRETURN expresion:exp DSENTENCIAS
 	{:
+		if(exp instanceof Parametro)
+			throw new RuntimeException("No se ha encontrado el simbolo en la sentencia devolver: " + ((Parametro) exp).getNombre());
 		//¿¿HAY QUE ASEGURARSE QUE SE VAYA A EJECUTAR UN DEVOLVER EN CADA IF,ETC??
 		String tipo = ((Expresion) exp).getType();
 		System.out.println("LLegada a sentencia devolver de tipo: " + ((Expresion) exp).getType());
