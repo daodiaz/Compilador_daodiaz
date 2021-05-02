@@ -4,8 +4,7 @@ public abstract class Expresion extends NonTerminal {
 	protected Expresion expresion_izq;
 	protected String operando;
 	protected Expresion expresion_der;
-	protected int valor;
-	protected boolean valor_logico;
+	protected Object valor;
 	protected String tipo;
 	
 	public Expresion (Expresion expresion_izq, String operando, Expresion expresion_der) {
@@ -24,13 +23,8 @@ public abstract class Expresion extends NonTerminal {
 	public abstract int getResultado();
 	
 	/*Método para devolver el valor de cualquier expresion*/
-	public int getValor() {
+	public Object getValor() {
 		return valor;
-	}
-	
-	/*Método para devolver el valor de cualquier expresion*/
-	public boolean getValorLogico() {
-		return valor_logico;
 	}
 	
 	public String getType() {

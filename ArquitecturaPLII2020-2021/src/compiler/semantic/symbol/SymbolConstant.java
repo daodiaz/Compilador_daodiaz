@@ -15,6 +15,7 @@ public class SymbolConstant
     extends SymbolBase
 {
     private String value;
+    private Object valor;
     
     /**
      * Constructor for SymbolConstant.
@@ -35,5 +36,13 @@ public class SymbolConstant
     
     public String getValue() {
     	return value;
+    }
+    
+    public void setValor(Object valor) {
+    	this.valor = valor;
+    }
+    
+    public Object getValor() {
+    	return valor;
     }
 }

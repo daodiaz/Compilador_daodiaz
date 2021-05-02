@@ -11,9 +11,9 @@ public class PrimitivaLogica extends Expresion {
 	}
 
 	@Override
-	public boolean getValorLogico() {
+	public Object getValor() {
 		// TODO Auto-generated method stub
-		return valor_logico;
+		return valor;
 	}
 
 	@Override
@@ -23,7 +23,7 @@ public class PrimitivaLogica extends Expresion {
 	}
 	
 	public void setValorLogico(boolean valor) {
-		valor_logico = valor;
+		valor = valor;
 	}
 	
 	public void setNombreVector(String nombre) {

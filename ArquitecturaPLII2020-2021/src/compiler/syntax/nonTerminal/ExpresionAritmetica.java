@@ -12,7 +12,8 @@ public class ExpresionAritmetica extends Expresion {
 	
 	/*Obtiene el resultado de la Expresión actual y lo guarda en el campo valor*/
 	public int getResultado() {
-		//Compruebo que las expresiones de la izquierda y la derecha son Expresiones aritméticas.
+		return 0;
+		/*//Compruebo que las expresiones de la izquierda y la derecha son Expresiones aritméticas.
 		if(((expresion_izq instanceof ExpresionAritmetica) || (expresion_izq instanceof PrimitivaAritmetica)) 
 			&& ((expresion_der instanceof ExpresionAritmetica) || (expresion_der instanceof PrimitivaAritmetica))) {
 			switch(operando) {
@@ -30,7 +31,7 @@ public class ExpresionAritmetica extends Expresion {
 		else {
 			throw new RuntimeException("No se puede realizar una operación entre una expresión de tipo " + 
 					expresion_izq.getClass().getSimpleName() + " con otra expresión de tipo " + expresion_der.getClass().getSimpleName());
-		}
+		}*/
 	}
 	
 	

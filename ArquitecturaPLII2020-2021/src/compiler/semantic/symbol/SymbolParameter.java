@@ -15,7 +15,10 @@ public class SymbolParameter
     extends SymbolBase
 {  
 	 private boolean valvsref;
-    /**
+	 
+	 private String value;
+	 
+	 /**
      * Constructor for SymbolParameter.
      * @param scope The declaration scope.
      * @param name The symbol name.
@@ -30,5 +33,13 @@ public class SymbolParameter
     
     public void setValVSRef(boolean bandera) {
     	valvsref = bandera;
+    }
+    
+    public void setValue(String value) {
+    	this.value = value;
+    }
+    
+    public String getValue() {
+    	return value;
     }
 }

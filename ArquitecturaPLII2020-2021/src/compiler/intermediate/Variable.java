@@ -12,6 +12,7 @@ public class Variable
 {
     private String  name     = null;
     private ScopeIF scope    = null;
+    private boolean initial  = false; 
         
     /**
      * Constructor for Variable.
@@ -111,5 +112,9 @@ public class Variable
     public final String toString ()
     {    
         return name;
+    }
+    
+    public void setInitial() {
+    	initial = true;
     }
 }

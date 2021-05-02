@@ -217,6 +217,7 @@ defconstantes ::=
 		String nombre_constante = ((TokenIF) id).getLexema();
 		//Dependiendo de si es entera o lógica añado la constante a la tabla de simbolos.
 		if(valor instanceof PrimitivaAritmetica){
+			valor = (PrimitivaAritmetica) valor;
 			if(syTable.containsSymbol(nombre_constante)){
 				throw new RuntimeException("Ya existe una constante en este ámbito con el mismo nombre: " + nombre_constante);
 			}
@@ -231,6 +232,7 @@ defconstantes ::=
 			SymbolConstant constante = new SymbolConstant(scope, nombre_constante, tipe);
 			syTable.addSymbol(nombre_constante, constante);
 		} else if (valor instanceof PrimitivaLogica){
+			valor = (PrimitivaLogica) valor;
 			if(syTable.containsSymbol(nombre_constante)){
 				throw new RuntimeException("Ya existe una constante en este ámbito con el mismo nombre: " + nombre_constante);
 			}
@@ -246,6 +248,10 @@ defconstantes ::=
 			syTable.addSymbol(nombre_constante, constante);
 		} else
 			throw new RuntimeException("Las constantes sólo pueden ser enteras o lógicas");
+		
+		//Guardo el valor en la constante.
+		Value value = new Value(valor.getValor());
+		constante.setValor(value);
 	:}
 	| epsilon; 
 valorconstante ::=   
@@ -665,9 +671,27 @@ expresion ::=
 	{:
 		//Compruebo que ambas expresiones son o bien lógicas o bien primitivas lógicas.
 		if(((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))){
-			//En dicho caso creo la expresión aritmética.
-			ExpresionLogica logica = new ExpresionLogica((Expresion) vi, "<",(Expresion) vd);
-			RESULT= logica;
+			//Declaro las instancias necesarias para añadir el código intermedio.
+			ScopeIF scope = scopeManager.getCurrentScope();
+			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+			TemporalFactoryIF tf = new TemporalFactory(scope);
+			TemporalIF vi_temp = ((Expresion) vi).getTemporal();
+			TemporalIF vd_temp = ((Expresion) vd).getTemporal();
+			TemporalIF temp_act = tf.create();
+			
+			//Creo el código intermedio.
+			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			icb.addQuadruples(((Expresion) vd).getIntermediateCode());
+			icb.addQuadruple("LS", temp_act, vi_temp, vd_temp);
+			
+			//Creo la expresión lógica.
+			ExpresionLogica exp_logica = new ExpresionLogica((Expresion) vi, "<",(Expresion) vd);
+			
+			//Seteo el temporal actual y su código intermedio en la nueva expresión lógica.
+			exp_logica.setTemporal(temp_act);
+			exp_logica.setIntermediateCode(icb.create());
+
+			RESULT= exp_logica;
 		}
 		else
 			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
@@ -677,9 +701,27 @@ expresion ::=
 		System.out.println("Analizando parte de expresión");
 		//Compruebo que ambas expresiones son o bien lógicas o bien primitivas lógicas.
 		if(((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))){
-			//En dicho caso creo la expresión aritmética.
-			ExpresionLogica logica = new ExpresionLogica((Expresion) vi, "==",(Expresion) vd);
-			RESULT= logica;
+			//Declaro las instancias necesarias para añadir el código intermedio.
+			ScopeIF scope = scopeManager.getCurrentScope();
+			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+			TemporalFactoryIF tf = new TemporalFactory(scope);
+			TemporalIF vi_temp = ((Expresion) vi).getTemporal();
+			TemporalIF vd_temp = ((Expresion) vd).getTemporal();
+			TemporalIF temp_act = tf.create();
+			
+			//Creo el código intermedio.
+			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			icb.addQuadruples(((Expresion) vd).getIntermediateCode());
+			icb.addQuadruple("EQ", temp_act, vi_temp, vd_temp);
+
+			//Creo la expresión lógica.
+			ExpresionLogica exp_logica = new ExpresionLogica((Expresion) vi, "==",(Expresion) vd);
+			
+			//Seteo el temporal actual y su código intermedio en la nueva expresión lógica.
+			exp_logica.setTemporal(temp_act);
+			exp_logica.setIntermediateCode(icb.create());
+
+			RESULT= exp_logica;
 		}
 		else
 			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
@@ -696,6 +738,12 @@ expresion ::=
 		if(scopeManager.containsSymbol(lexema)){
 			System.out.println("Identificador encontrado: " + ((TokenIF) id).getLexema());
 			identificador = scopeManager.searchSymbol(((TokenIF) id).getLexema());
+			
+			//Obtengo las instancias necesarias para el codigo intermedio.
+			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+			TemporalFactoryIF tf = new TemporalFactory(scope);
+			TemporalIF temp_act = tf.create();
+
 			//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser parte de una expresión.
 			Expresion primitiva;
 			switch(identificador.getClass().getSimpleName()){
@@ -717,8 +765,17 @@ expresion ::=
 					}
 					else
 						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros.");
+					
+					//Creo el codigo intermedio.
+					Value value = new Value(((SymbolConstant) identificador).getValor());
+					icb.addQuadruple("MV", temp_act, value);
 					break;
 				case "SymbolParameter":
+					//Compruebo que la variable haya sido inicializada.
+					if(!identificador.getValue()){
+						throw new RuntimeException("No se puede utilizar una variable no inicializada dentro de una expresión, antes hay que asignarle un valor");
+					}
+
 					if(identificador.getType().getName().equals("entero")){
 						//Creo la primitiva en el caso de que el tipo de la constante sea entera.
 						primitiva = new PrimitivaAritmetica(null,null,null); 
@@ -735,8 +792,18 @@ expresion ::=
 					} 
 					else
 						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
+
+					//Creo el codigo intermedio.
+					Variable variable = new Variable(identificador.getName(), scope); 
+					icb.addQuadruple("MVA", temp_act, variable);
+
 					break;
 				case "SymbolVariable":
+					//Compruebo que la variable haya sido inicializada.
+					if(!identificador.getValue()){
+						throw new RuntimeException("No se puede utilizar una variable no inicializada dentro de una expresión, antes hay que asignarle un valor");
+					}
+
 					if(identificador.getType().getName().equals("entero")){
 						//Creo la primitiva en el caso de que el tipo de la constante sea entera.
 						primitiva = new PrimitivaAritmetica(null,null,null); 
@@ -753,10 +820,16 @@ expresion ::=
 					} 
 					else
 						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
+					//Creo el codigo intermedio.
+					Variable variable = new Variable(identificador.getName(), scope); 
+					icb.addQuadruple("MVA", temp_act, variable);					
 					break;
 				default:
 					throw new RuntimeException("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión.");
-			}			
+			}	
+			//Seteo el codigo intermedio y el temporal de la nueva expresión.
+			primitiva.setTemporal(temp_act);
+			primitiva.setIntermediateCode(icb.create());		
 		}
 		else {
 			//Puede que sea un identificador que se esté declarando justamente ahora.
@@ -781,6 +854,12 @@ expresion ::=
 		}
 		else
 			throw new RuntimeException("No existe ninguna función con nombre " + lexema);
+		//Obtengo las instancias necesarias para el codigo intermedio.
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_f = funcion.getTemporal();
+		TemporalIF temp_act = tf.create();
+
 		Expresion primitiva;
 		//Según el tipo de la función creo un tipo de expresión u otra.
 		switch(funcion.getReturn().getName()){
@@ -788,30 +867,67 @@ expresion ::=
 				//Creo una PrimitivaAritmetica.
 				primitiva = new PrimitivaAritmetica(null,null,null);
 				//primitiva.setValor(Integer.parseInt(funcion.getValue()));
-				RESULT = primitiva;
 				break;
 			case "boolean": 
 				//Creo una PrimitivaLogica
 				primitiva = new PrimitivaLogica(null,null,null);
 				//primitiva.setValorLogico(Boolean.valueOf(funcion.getValue()));
-				RESULT = primitiva;
 				break;
 			default:
 				throw new RuntimeException("Las funciones con este tipo de retorno " + funcion.getType().getName() + " no pueden formar parte de una expresión.");		
 		}
+		//Creo el codigo intermedio.
+		icb.addQuadruples(funcion.getIntermediateCode());
+		icb.addQuadruple("MV", temp_act, temp_f);
+
+		//Seteo el codigo intermedio y temporal a la primitiva actual.
+		primitiva.setTemporal(temp_act);
+		primitiva-setIntermediateCode(icb.create());
+		
+		RESULT = primitiva;
 	:}
 	| CIERTO 
 	{:
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
+			
+		//Creo el código intermedio.
+		Value valor = new Value(true);
+		icb.addQuadruple("MV", temp_act, valor);
+			
 		//Creo una primitiva lógica y le seteo su valor true.
 		PrimitivaLogica primitiva_logica = new PrimitivaLogica(null,null,null);
 		primitiva_logica.setValorLogico(true);
+
+		//Seteo el temporal actual y su código intermedio en la nueva expresión lógica.
+		primitiva_logica.setTemporal(temp_act);
+		primitiva_logica.setIntermediateCode(icb.create());
+
 		RESULT = primitiva_logica;
 	:}
 	| FALSO 
 	{:
-		//Creo una primitiva lógica y le seteo su valor false.
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
+			
+		//Creo el código intermedio.
+		Value valor = new Value(false);
+		icb.addQuadruple("MV", temp_act, valor);
+			
+		//Creo una primitiva lógica y le seteo su valor true.
 		PrimitivaLogica primitiva_logica = new PrimitivaLogica(null,null,null);
 		primitiva_logica.setValorLogico(false);
+
+		//Seteo el temporal actual y su código intermedio en la nueva expresión lógica.
+		primitiva_logica.setTemporal(temp_act);
+		primitiva_logica.setIntermediateCode(icb.create());
+
 		RESULT = primitiva_logica;
 	:}
 	| miembrovector:v
@@ -820,10 +936,25 @@ expresion ::=
 	:}
 	| NUM:num
 	{:
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
+			
+		//Creo el código intermedio.
+		Value valor = new Value(Integer.parseInt(((TokenIF) num).getLexema()));
+		icb.addQuadruple("MV", temp_act, valor);
+
 		//Creo la primitiva, le seteo su valor y la devuelvo.
-		PrimitivaAritmetica numero = new PrimitivaAritmetica(null, null, null);
-		numero.setValor(Integer.parseInt(((TokenIF) num).getLexema()));
-		RESULT = numero;
+		PrimitivaAritmetica primitiva_aritmetica = new PrimitivaAritmetica(null, null, null);
+		primitiva_aritmetica.setValor(Integer.parseInt(((TokenIF) num).getLexema()));
+		
+		//Seteo el temporal actual y su código intermedio en la nueva expresión lógica.
+		primitiva_aritmetica.setTemporal(temp_act);
+		primitiva_aritmetica.setIntermediateCode(icb.create());
+		
+		RESULT = primitiva_aritmetica;
 	:}
 	| expresionlvl2:lvl2
 	{:
@@ -883,9 +1014,25 @@ expresionlvl4 ::=
 	{:
 		//Compruebo que la expresión sea bien lógica o bien primitiva lógica.
 		if((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica)){
-			//En dicho caso creo la expresión aritmética.
-			ExpresionLogica logica = new ExpresionLogica(null, "!", (Expresion) vd);
-			RESULT= logica;
+			//Obtengo el scope y las variables necsarias para setear el codigo intermedio.
+			ScopeIF scope = scopeManager.getCurrentScope();
+			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+			TemporalFactoryIF tf = new TemporalFactory(scope);
+			TemporalIF vd_temp = ((Expresion) vd).getTemporal();
+			TemporalIF temp_act = tf.create();
+			
+			//Creo el codigo intermedio necesario. Primero el ya añadido hasta le momento y ñuego el que añade esta operación.
+			icb.addQuadruples(((Expresion) vd).getIntermediateCode());
+			icb.addQuadruple("NOT", temp_act, vd_temp);
+
+			//Creo la expresión aritmética.
+			ExpresionLogica exp_logica = new ExpresionLogica(null, "!", (Expresion) vd);
+			
+			//Seteo el temporal creado de esta operación en la expresión actuañ y su cçodigo intermedio.
+			exp_logica.setTemporal(temp_act);
+			exp_logica.setIntermediateCode(icb.create());
+
+			RESULT= exp_logica;
 		}
 		else
 			throw new RuntimeException("Una expresión de tipo " + ( (Expresion) vd).getClass().getSimpleName() + " no puede ser parte de una expresión lógica de negación.");
@@ -1007,23 +1154,56 @@ sentenciadeasignacion ::= parteizquierdaasignacion:pi ASIGNACION parametroasigna
 		if(pd instanceof Parametro){
 			throw new RuntimeException("El identificador no se ha encontrado en la tabla de simbolos: " + ((Parametro)pd).getNombre());
 		}
-		System.out.println("El tipo de la expresión derecha es: " + ((Expresion) pd).getType());
+		if(pi instanceof SymbolVariable){
+			pi = (SymbolVariable) pi;
+		}
+		
+		if(pi instanceof SymbolParameter) {
+			pi = (SymbolParameter) pi;
+		}
+
+		pd = (Expresion) pd;
+
+		System.out.println("El tipo de la expresión derecha es: " + pd.getType());
 		//Compruebo si concuerdan los tipos de la parte izquierda y derecha y qué tipòs son, según sea seteo la SentenciaAsignacion.
-		if(( ((SymbolIF) pi).getType().getName().equals("entero") && ((Expresion) pd).getType().equals("entero"))){
-			SentenciaAsignacion asign = new SentenciaAsignacion((SymbolIF) pi, (Expresion) pd, "entero");
+		if((pi.getType().getName().equals("entero") && (pd.getType().equals("entero"))){			
+			SentenciaAsignacion asign = new SentenciaAsignacion(pi, pd, "entero");
 			System.out.println("Sentencia de asignación entera analizada");
-			RESULT = asign;
-		} else if(((SymbolIF) pi).getType().getName().equals("boolean") && ((Expresion) pd).getType().equals("boolean")){
+		} else if(pi.getType().getName().equals("boolean") && pd.getType().equals("boolean")){
 			SentenciaAsignacion asign = new SentenciaAsignacion((SymbolIF) pi,(Expresion) pd,"boolean");
 			System.out.println("Sentencia de asignación booleana analizada");
-			RESULT = asign;
 		//En el caso de miembros de vectores la cosa se complica un poco, compruebo que primero sea un array y luego que su tiempo simple sea igual a la expresión de la derecha.
-		} else if((((SymbolIF) pi).getType() instanceof TypeArray) && ((TypeArray) ((SymbolIF) pi).getType()).getTypeSimple().getName().equals(((Expresion) pd).getType())) {
+		} else if((pi.getType() instanceof TypeArray) && ((TypeArray) pi.getType()).getTypeSimple().getName().equals(pd.getType()))) {
 			SentenciaAsignacion asign = new SentenciaAsignacion((SymbolIF) pi, (Expresion) pd,"miembro_vector");
 			System.out.println("Sentencia de asignación a miembro de vector añadida");
 		} else
 			//System.out.println(((SymbolIF) pi).getType().getName() + "     tiposimple" + ((TypeArray) ((SymbolIF) pi).getType()).getTypeSimple().getName);
 			throw new RuntimeException("No se puede asignar a una variable de tipo " + ((SymbolIF) pi).getType().getName() + " una expresión de tipo " + ((Expresion) pd).getType());
+		
+		//Instancio lo necesario parea crear el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF pd_temp = pd.getTemporal();
+		TemporalIF temp_act = tf.create():
+		
+		//Creo la variable a la que se le va a guardar el temporal de la expresión.
+		Variable variable = new Variable(pi.getName(), scope);
+			
+		//Creo el código intermedio.
+		icb.addQuadruples(pd.getIntermediateCode());
+		icb.addQuadruple("MV", tmp_act, pd_temp);
+		//OJO! guardo en la dirección de la variable el temporal.
+		icb.addQuadruple("STA", variable, pd_temp);
+
+		//Seteo el temporal y el codigo intermedio en asignacion.
+		asign.setTemporal(tmp_act);
+		asign.setIntermediateCode(icb.create());
+
+		//Guardo true en el simbolo de la variable para saber que ya se ha inicializado.
+		pi.setValue(true);
+
+		RESULT = asign;
 	:}; 
 parametroasignacion ::= expresion:ex
 	{:

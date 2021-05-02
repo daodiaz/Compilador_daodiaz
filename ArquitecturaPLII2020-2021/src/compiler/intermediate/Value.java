@@ -20,7 +20,16 @@ public class Value
         super ();
         this.value = value;
     }
-
+    
+    public Value(int value) {
+    	super();
+    	this.value = Integer.valueOf(value);
+    }
+    
+    public Value(boolean value) {
+    	super();
+    	this.value = Boolean.valueOf(value);
+    }
     /**
      * Returns the value.
      * @return Returns the value.

@@ -14,7 +14,7 @@ public class PrimitivaAritmetica extends Expresion {
 	@Override
 	public int getResultado() {
 		// TODO Auto-generated method stub
-		return valor;
+		return 0;
 	}
 	
 	/*Método para setear el valor de la primitiva aritmética, se le debe de pasar argumento en Integer*/
@@ -22,7 +22,7 @@ public class PrimitivaAritmetica extends Expresion {
 		this.valor = valor;
 	}
 	
-	public int getValor() {
+	public Object getValor() {
 		return valor;	
 	}
 	
