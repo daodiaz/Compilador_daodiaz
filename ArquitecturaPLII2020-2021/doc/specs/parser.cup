@@ -963,14 +963,30 @@ expresion ::=
 	:};
 expresionlvl2 ::=  
 	expresion:vi SUMA expresion:vd 
-	{:  
-		//ScopeIF scope = scopeManager.getCurrentScope();
-		//SymbolTableIF syTable = scope.getSymbolTable();
-		
+	{:  		
 		//Compruebo que ambas expresiones son o bien aritméticas o bien primitivas aritméticas.
 		if(((vi instanceof ExpresionAritmetica) ||(vi instanceof PrimitivaAritmetica)) && ((vd instanceof ExpresionAritmetica) ||	(vd instanceof PrimitivaAritmetica))){
-			//En dicho caso creo la expresión aritmética.
-			RESULT= new ExpresionAritmetica((Expresion) vi, "+", (Expresion) vd);
+			//Declaro las instancias necesarias para añadir el código intermedio.
+			ScopeIF scope = scopeManager.getCurrentScope();
+			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+			TemporalFactoryIF tf = new TemporalFactory(scope);
+			TemporalIF temp_act = tf.create();
+			TemporalIF vi_temp = ((Expresion) vi).getTemporal();
+			TemporalIF vd_temp = ((Expresion) vd).getTemporal();
+			
+			//Creo el código intermedio.
+			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			icb.addQuadruple("ADD", temp_act, vi_temp, vd_temp);
+			
+			//Creo la expresión aritmética.
+			ExpresionAritmetica exp_arit = new ExpresionAritmetica((Expresion) vi, "+", (Expresion) vd);
+			
+			//Seteo el temporal y el codigo intermedio a la expresion creada.
+			exp_arit.setIntermediateCode(icb.create());
+			exp_arit.setTemporal(temp_act);
+	
+			RESULT=  exp_arit;
 		}
 		else
 			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
@@ -985,9 +1001,40 @@ expresionlvl3 ::=
 	{:
 		//Compruebo que ambas expresiones son o bien lógicas o bien primitivas lógicas.
 		if(((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))){
-			//En dicho caso creo la expresión aritmética.
-			ExpresionLogica logica = new ExpresionLogica((Expresion) vi, "&&", (Expresion) vd);
-			RESULT= logica;
+			//Declaro las instancias necesarias para añadir el código intermedio.
+			ScopeIF scope = scopeManager.getCurrentScope();
+			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+			TemporalFactoryIF tf = new TemporalFactory(scope);
+			LabelFactoryIF label_f = new LabelFactory();
+			TemporalIF temp_act = tf.create();
+			TemporalIF vi_temp = ((Expresion) vi).getTemporal();
+			TemporalIF vd_temp = ((Expresion) vd).getTemporal();
+			LabelIF SF = label_f.create();
+			LabelIF ST = label_f.create();
+			
+			//Creo el código intermedio.
+			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			//Si no es cierta. saltar al salto falso (SF). Si es cierta, continuar con el codigo intermedio de la expresión derecha.
+			icb.addQuadruple("BRF", vi_temp, SF);
+			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			//Si no es cierta saltar al salto falso (SF), si es cierta guardar el estado cierto en temporal y saltar al salto final (ST)
+			icb.addQuadruple("BRF", vd_temp, SF);
+			icb.addQuadruple("MV", temp_act, new Value(1));
+			icb.addQuadruple("BR", ST);
+			//Si se llega a este salto quiere decir que el valor de la expresión es 0.
+			icb.addQuadruple("INL", SF);
+			icb.addQuadruple("MV", temp_act, new Value(0));
+			//Este salto se utiliza para saltar el seteo a 0 en el caso de que las dos expresiones sean ciertas.
+			icb.addQuadruple("INL", ST);
+			
+			//Creo la expresión aritmética.
+			ExpresionLogica exp_log = new ExpresionLogica((Expresion) vi, "&&", (Expresion) vd);
+			
+			//Seteo los temporales y el código intermedio.
+			exp_log.setTemporal(temp_act);
+			exp_log.setIntermediateCode(icb.create());		
+	
+			RESULT= exp_log;
 		}
 		else
 			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
@@ -997,9 +1044,27 @@ expresionlvl3 ::=
 		//ScopeIF scope = scopeManager.getCurrentScope();
 		//SymbolTableIF syTable = scope.getSymbolTable();
 		if(((vi instanceof ExpresionAritmetica) ||(vi instanceof PrimitivaAritmetica)) && ((vd instanceof ExpresionAritmetica) ||	(vd instanceof PrimitivaAritmetica))){
+			//Declaro las instancias necesarias para añadir el código intermedio.
+			ScopeIF scope = scopeManager.getCurrentScope();
+			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+			TemporalFactoryIF tf = new TemporalFactory(scope);
+			TemporalIF temp_act = tf.create();
+			TemporalIF vi_temp = ((Expresion) vi).getTemporal();
+			TemporalIF vd_temp = ((Expresion) vd).getTemporal();
+			
+			//Creo el código intermedio.
+			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			icb.addQuadruple("MUL",temp_act, vi_temp, vd_temp);
+
 			//En dicho caso creo la expresión aritmética.
-			ExpresionAritmetica logica = new ExpresionAritmetica((Expresion) vi, "+", (Expresion) vd);
-			RESULT= logica;
+			ExpresionAritmetica exp_arit = new ExpresionAritmetica((Expresion) vi, "+", (Expresion) vd);
+
+			//Seteo los temporales y el codigo intermedio.
+			exp_arit.setTemporal(temp_act);
+			exp_arit.setIntermediateCode(icb.create());
+			
+			RESULT= exp_arit;
 		}
 		else
 			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
@@ -1325,7 +1390,47 @@ sentenciaif ::=
 			throw new RuntimeException("No se puede establecer como condición de una sentencia condicional una expresión de tipo (sólo lógica): " + expresion.getClass().getSimpleName());
 		}
 	:} 
-	STARTIF DELIMFUNC listaSentencias rellenoif  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS ;
+	STARTIF DELIMFUNC listaSentencias:sents rellenoif:els FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS
+	{:
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		LabelFactory label_f = new LabelFactory(scope);
+		TemporalIF temp_act = tf.create();
+		TemporalIF exp_temp = ((Expresion) exp).getTemporal();
+		TemporalIF sents_temp = (((NonTerminal) sents).getTemporal();
+		TemporalIF else_temp = ((NonTerminal) els).getTemporal();
+		LabelIF SF = label_f.create();
+		LabelIF ST = label_f.create();
+			
+		//Creo el código intermedio.
+		icv.addAuadruples(((Expresion) exp).getIntermediateCode());
+		//En el caso de que no sea cierta la expresión salta a la expresión else.
+		icb.addQuadruple("BRF", exp_temp, SF);
+		//Compruebo de que exista sentencias en el if (puede ser epsilon).
+		if(((NonTerminal) sents).getIntermediateCode() == null)
+			icb.addQuadruple("BR", ST);
+		//Añado el codigo intermedio del if.
+		icb.addQuadruples(((NonTerminal) sents).getIntermediateCode());
+		//Salto al final del if.
+		icb.addQuadruple("BR", ST);
+		icb.addQuadruple("INL", SF);
+		//Antes de ejecutar las sentencias else, hay que asegurarse de que existe sentencia else con código (puede ser epsilon). 
+		if(((NonTerminal) els).getIntermediateCode() == null)
+			icb.addQuadruple("BR", ST);
+		icb.addQuadruples(((NonTerminal) els).getIntermediateCode());
+		//Salto para llegar al final sin ejecutar el if y/o el else.
+		icv.addQuadruple("INL", ST);
+		
+		//Creo la sentencia condicional.
+		SentenciaCondicional cond = new SentenciaCondicional();
+		
+		//Seteo el codigo intermedio de la sentencia condicional.
+		cond.setIntermediateCode(icb.create());
+		
+		RESULT = cond;
+	:};
 sentenciaifFuncion ::= 
 	COMIENZOSI expresion:exp
 	{:
@@ -1335,9 +1440,65 @@ sentenciaifFuncion ::=
 			throw new RuntimeException("No se puede establecer como condición de una sentencia condicional una expresión de tipo (sólo lógica): " + expresion.getClass().getSimpleName());
 		}
 	:}  
-	STARTIF DELIMFUNC listaSentenciasFuncion rellenoifFuncion  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS;
-rellenoifFuncion ::=  ALTERNATIVASI DELIMFUNC  listaSentenciasFuncion | epsilon ;
-rellenoif ::=  ALTERNATIVASI DELIMFUNC  listaSentencias | epsilon ;
+	STARTIF DELIMFUNC listaSentenciasFuncion:sents rellenoifFuncion:els  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS
+	{:
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		LabelFactory label_f = new LabelFactory(scope);
+		TemporalIF temp_act = tf.create();
+		TemporalIF exp_temp = ((Expresion) exp).getTemporal();
+		TemporalIF sents_temp = (((NonTerminal) sents).getTemporal();
+		TemporalIF else_temp = ((NonTerminal) els).getTemporal();
+		LabelIF SF = label_f.create();
+		LabelIF ST = label_f.create();
+			
+		//Creo el código intermedio.
+		icv.addAuadruples(((Expresion) exp).getIntermediateCode());
+		//En el caso de que no sea cierta la expresión salta a la expresión else.
+		icb.addQuadruple("BRF", exp_temp, SF);
+		//Compruebo de que exista sentencias en el if (puede ser epsilon).
+		if(((NonTerminal) sents).getIntermediateCode() == null)
+			icb.addQuadruple("BR", ST);
+		//Añado el codigo intermedio del if.
+		icb.addQuadruples(((NonTerminal) sents).getIntermediateCode());
+		//Salto al final del if.
+		icb.addQuadruple("BR", ST);
+		icb.addQuadruple("INL", SF);
+		//Antes de ejecutar las sentencias else, hay que asegurarse de que existe sentencia else con código (puede ser epsilon). 
+		if(((NonTerminal) els).getIntermediateCode() == null)
+			icb.addQuadruple("BR", ST);
+		icb.addQuadruples(((NonTerminal) els).getIntermediateCode());
+		//Salto para llegar al final sin ejecutar el if y/o el else.
+		icv.addQuadruple("INL", ST);
+		
+		//Creo la sentencia condicional.
+		SentenciaCondicional cond = new SentenciaCondicional();
+		
+		//Seteo el codigo intermedio de la sentencia condicional.
+		cond.setIntermediateCode(icb.create());
+		
+		RESULT = cond;
+	:};
+rellenoifFuncion ::=  
+	ALTERNATIVASI DELIMFUNC listaSentenciasFuncion:sents
+	{:
+		RESULT = sents;
+	:}  
+	| epsilon 
+	{:
+		RESULT = new NonTerminal();
+	:};
+rellenoif ::=  
+	ALTERNATIVASI DELIMFUNC listaSentencias:sents
+	{:
+		RESULT = sents;
+	:} 
+	| epsilon
+	{:
+		RESULT = new NonTerminal();
+	:};
 
 // for 
 sentenciafor ::= 
@@ -1366,8 +1527,54 @@ sentenciafor ::=
 		//Compruebo que las expresiones sean de tipo aritméticas
 		if(!((inferior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica) && (superior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica)))
 			throw new RuntimeException("Las expresiones que conformar los rangos deben de ser aritméticas, actualmente: " + inferior.getClass().getSimpleName() + " (rango inferior) y " + superior.getClass().getSimpleName() + " (rango superior)");
+		
 	:}
-	DELIMFUNC listaSentencias FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS;
+	DELIMFUNC listaSentencias:sents FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS
+	{:
+		Expresion inferior = (Expresion) rango_inf;
+		Expresion superior = (Expresion) rango_sup;
+
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		LabelFactory label_f = new LabelFactory(scope);
+		TemporalIF temp_act = tf.create();
+		TemporalIF inf_temp = inferior.getTemporal();
+		TemporalIF sup_temp = superior.getTemporal();
+		TemporalIF else_temp = ((NonTerminal) sents).getTemporal();
+		LabelIF SI = label_f.create();
+		LabelIF ST = label_f.create();
+
+		//Creo la variable necesaria para guardar el indice.
+		Variable index = new Variable(((TokenIF)id).getLexema(), scope);
+
+		//Creo el código intermedio.
+		icb.addQuadruples(inferior.getIntermediateCode());
+		icb.addQuadruples(superior.getIntermediateCode());
+		//Guardo el indice inicial en temporal.
+		icb.addQuadruple("MV", index, inf_temp);
+		//Inserto el salto de iteracion SI para poder realizar iteraciones a partir de aquí.
+		icb.addQuadruple("INL", SI);
+		//Calculo si hay que terminar el for o seguir.
+		icb.addQuadruple("GR", temp_act, index, sup_temp);
+		//En el caso de que haya que terminar salta al salto de terminación ST.
+		icb.addQuadruple("BRT", temp_act, ST);
+		//En otro caso ejecuto las sentencias de nuevo e incremento la variable.
+		icb.addQuadruples(((NonTerminal) sents).getIntermediateCode());
+		icb.addQuadruple("INC", index, index);
+		icb.addQuadruple("BR", SI);
+		//Salto para terminar el bucle
+		icb.addQuadruple("INL", ST);
+		
+		//Creo la sentencia for.
+		SentenciaFor sentfor = new SentenciaFor();
+		
+		//Seteo el codigo intermedio de la sentencia
+		sentfor.setIntermediateCode(icb.create());
+		
+		RESULT = sentfor;
+	:};
 sentenciaforFuncion ::= 
 	COMIENZOBUCLEPARA IDEN:id
 	{:
@@ -1395,8 +1602,52 @@ sentenciaforFuncion ::=
 		if(!((inferior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica) && (superior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica)))
 			throw new RuntimeException("Las expresiones que conformar los rangos deben de ser aritméticas, actualmente: " + inferior.getClass().getSimpleName() + " (rango inferior) y " + superior.getClass().getSimpleName() + " (rango superior)");
 	:} 
-	DELIMFUNC listaSentenciasFuncion FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS;
+	DELIMFUNC listaSentenciasFuncion:sents FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS
+	{:
+		Expresion inferior = (Expresion) rango_inf;
+		Expresion superior = (Expresion) rango_sup;
 
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		LabelFactory label_f = new LabelFactory(scope);
+		TemporalIF temp_act = tf.create();
+		TemporalIF inf_temp = inferior.getTemporal();
+		TemporalIF sup_temp = superior.getTemporal();
+		TemporalIF else_temp = ((NonTerminal) sents).getTemporal();
+		LabelIF SI = label_f.create();
+		LabelIF ST = label_f.create();
+
+		//Creo la variable necesaria para guardar el indice.
+		Variable index = new Variable(((TokenIF)id).getLexema(), scope);
+
+		//Creo el código intermedio.
+		icb.addQuadruples(inferior.getIntermediateCode());
+		icb.addQuadruples(superior.getIntermediateCode());
+		//Guardo el indice inicial en temporal.
+		icb.addQuadruple("MV", index, inf_temp);
+		//Inserto el salto de iteracion SI para poder realizar iteraciones a partir de aquí.
+		icb.addQuadruple("INL", SI);
+		//Calculo si hay que terminar el for o seguir.
+		icb.addQuadruple("GR", temp_act, index, sup_temp);
+		//En el caso de que haya que terminar salta al salto de terminación ST.
+		icb.addQuadruple("BRT", temp_act, ST);
+		//En otro caso ejecuto las sentencias de nuevo e incremento la variable.
+		icb.addQuadruples(((NonTerminal) sents).getIntermediateCode());
+		icb.addQuadruple("INC", index, index);
+		icb.addQuadruple("BR", SI);
+		//Salto para terminar el bucle
+		icb.addQuadruple("INL", ST);
+		
+		//Creo la sentencia for.
+		SentenciaFor sentfor = new SentenciaFor();
+		
+		//Seteo el codigo intermedio de la sentencia
+		sentfor.setIntermediateCode(icb.create());
+		
+		RESULT = sentfor;
+	:};
 
 // escribir. 
 parametroEscribir ::= 
