@@ -333,9 +333,25 @@ tipovector ::=
 valorango ::= 
 	NUM:num
 	{:
-		//Tengo que obtener el numero del valor para pasarselo para calcular el rango del tipo.
-		int valor = Integer.parseInt(((TokenIF) num).getLexema());
-		RESULT = valor;
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
+			
+		//Creo el código intermedio.
+		Value valor = new Value(Integer.parseInt(((TokenIF) num).getLexema()));
+		icb.addQuadruple("MV", temp_act, valor);
+		
+		//Creo la primitiva.	
+		PrimitivaAritmetica rango = new PrimitivaAritmetica();
+		rango.setValor(Integer.parseInt(((TokenIF) num).getLexema()));
+
+		//Seteo el temporal y el codigo intermedio de la primitiva.
+		rango.setTemporal(temp_act);
+		rango.setIntermediateCode(icb.create());
+
+		RESULT = rango;
 	:} 
 	| IDEN:id
 	{:
@@ -370,18 +386,51 @@ valorango ::=
 		} else {
 			throw new RuntimeException("En este punto sólo se espera un símboloo variable o constante, no de otro tipo");
 		}
-		RESULT = valor;
+
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
+			
+		//Creo el código intermedio.
+		Value val = new Value(valor);
+		icb.addQuadruple("MV", temp_act, val);
+		
+		//Creo la primitiva.	
+		PrimitivaAritmetica rango = new PrimitivaAritmetica();
+		rango.setValor(valor);
+
+		//Seteo el temporal y el codigo intermedio de la primitiva.
+		rango.setTemporal(temp_act);
+		rango.setIntermediateCode(icb.create());
+
+		RESULT = rango;
 	:} 
 	| miembrovector:mv
 	{:
 		//Miembro vector devuelve una primitiva aritmetica o logica, solo si es entera obtengo su valor y lo devuelvo.
 		if(mv instanceof PrimitivaAritmetica) {
-			//int valor_miembro = ((PrimitivaAritmetica) mv).getValor();
-			//if( valor_miembro != null){
-			RESULT = mv;
-			//} else {
-				//throw new RuntimeException("El valor del miembro del vector no está inicialiado todavía, es null.");
-			//}
+			//Declaro las instancias necesarias para añadir el código intermedio.
+			ScopeIF scope = scopeManager.getCurrentScope();
+			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+			TemporalFactoryIF tf = new TemporalFactory(scope);
+			TemporalIF temp_r = ((PrimitivaAritmetica) mv).getTemporal();
+			TemporalIF temp_act = tf.create();
+			
+			//Creo el codigo intermedio.
+			icb.addQuadruples(((PrimitivaAritmetica) mv).getIntermediateCode());
+			icb.addQuadruple("MV", temp_act, temp_r);
+			
+		
+			//Creo la primitiva.	
+			PrimitivaAritmetica vector = new PrimitivaAritmetica();
+		
+			//Seteo el temporal y el codigo intermedio de la primitiva.
+			vector.setTemporal(temp_act);
+			vector.setIntermediateCode(icb.create());
+
+			RESULT = vector;
 		} else
 			throw new RuntimeException("Sólo se pueden instanciar rangos con enteros, actualmente la expresión vectorial es: " + mv.getClass().getSimpleName());
 		
@@ -882,7 +931,7 @@ expresion ::=
 
 		//Seteo el codigo intermedio y temporal a la primitiva actual.
 		primitiva.setTemporal(temp_act);
-		primitiva-setIntermediateCode(icb.create());
+		primitiva.setIntermediateCode(icb.create());
 		
 		RESULT = primitiva;
 	:}
@@ -1120,7 +1169,7 @@ expresionlvl5 ::=
 	:};
 
 // Acceso a vectores
-miembrovector::= IDEN:id CIZQUIERDO valorango:rango CDERECHO
+miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 	{:
 		//Hay que obtener el vector relacionado con miembroVector
 		ScopeIF scope = scopeManager.getCurrentScope();
@@ -1128,6 +1177,8 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:rango CDERECHO
 		String nombre_vector = ((TokenIF) id).getLexema();
 		SymbolIF vector; 
 		TypeArray tipo_array;
+		int rango = ((PrimitivaAritmetica) prim).getValor();
+
 		if(scopeManager.containsSymbol(nombre_vector) && (scopeManager.searchSymbol(nombre_vector).getType() instanceof TypeArray)){
 			vector = scopeManager.searchSymbol(nombre_vector);
 			//Compruebo que no se haya pasado de dimensión el rango proporcionado (>=).
@@ -1148,17 +1199,32 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:rango CDERECHO
 				//int valor_miembro = ((int) vector.getArray()[(int) rango]);
 				//primitiva.setValor(valor_miembro);
 				((PrimitivaAritmetica) primitiva).setNombreVector(nombre_vector);
-				RESULT = primitiva;
 				break;
 			case "boolean": 
 				primitiva = new PrimitivaLogica(null,null,null);
 				//boolean valor_miembro = ((boolean) vector.getArray()[(int) rango]);
 				//primitiva.setValorLogico(valor_miembro);
 				((PrimitivaLogica) primitiva).setNombreVector(nombre_vector);
-				RESULT = primitiva;
 				break;
 			default:
 				throw new RuntimeException("Los vectores solo pueden estar conformados de enteros o lógicos, actualmente: " + tipo_array.getTypeSimple());
+		
+		//Obtengo el scope y las variables necsarias para setear el codigo intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_p = ((PrimitivaAritmetica) prim).getTemporal();
+		TemporalIF temp_act = tf.create();
+			
+		//Creo el codigo intermedio necesario. Primero el ya añadido hasta le momento y ñuego el que añade esta operación.
+		icb.addQuadruples(((PrimitivaAritmetica) prim).getIntermediateCode());
+		icb.addQuadruple("MVP", temp_act, temp_p);
+		
+		//Seteo el temporal y el codigointermedio de primitiva
+		primitiva.setTemporal(temp_act);
+		primitiva.setIntermediateCode(icb.create());
+		
+		RESULT = primitiva;
 		}		
 	:};
  
@@ -1231,14 +1297,14 @@ sentenciadeasignacion ::= parteizquierdaasignacion:pi ASIGNACION parametroasigna
 
 		System.out.println("El tipo de la expresión derecha es: " + pd.getType());
 		//Compruebo si concuerdan los tipos de la parte izquierda y derecha y qué tipòs son, según sea seteo la SentenciaAsignacion.
-		if((pi.getType().getName().equals("entero") && (pd.getType().equals("entero"))){			
+		if((pi.getType().getName().equals("entero")) && (pd.getType().equals("entero"))){			
 			SentenciaAsignacion asign = new SentenciaAsignacion(pi, pd, "entero");
 			System.out.println("Sentencia de asignación entera analizada");
 		} else if(pi.getType().getName().equals("boolean") && pd.getType().equals("boolean")){
 			SentenciaAsignacion asign = new SentenciaAsignacion((SymbolIF) pi,(Expresion) pd,"boolean");
 			System.out.println("Sentencia de asignación booleana analizada");
 		//En el caso de miembros de vectores la cosa se complica un poco, compruebo que primero sea un array y luego que su tiempo simple sea igual a la expresión de la derecha.
-		} else if((pi.getType() instanceof TypeArray) && ((TypeArray) pi.getType()).getTypeSimple().getName().equals(pd.getType()))) {
+		} else if((pi.getType() instanceof TypeArray) && ((TypeArray) pi.getType()).getTypeSimple().getName().equals(pd.getType())) {
 			SentenciaAsignacion asign = new SentenciaAsignacion((SymbolIF) pi, (Expresion) pd,"miembro_vector");
 			System.out.println("Sentencia de asignación a miembro de vector añadida");
 		} else
@@ -1250,7 +1316,7 @@ sentenciadeasignacion ::= parteizquierdaasignacion:pi ASIGNACION parametroasigna
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
 		TemporalIF pd_temp = pd.getTemporal();
-		TemporalIF temp_act = tf.create():
+		TemporalIF temp_act = tf.create();
 		
 		//Creo la variable a la que se le va a guardar el temporal de la expresión.
 		Variable variable = new Variable(pi.getName(), scope);
@@ -1396,10 +1462,10 @@ sentenciaif ::=
 		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
-		LabelFactory label_f = new LabelFactory(scope);
+		LabelFactory label_f = new LabelFactory();
 		TemporalIF temp_act = tf.create();
 		TemporalIF exp_temp = ((Expresion) exp).getTemporal();
-		TemporalIF sents_temp = (((NonTerminal) sents).getTemporal();
+		TemporalIF sents_temp = ((NonTerminal) sents).getTemporal();
 		TemporalIF else_temp = ((NonTerminal) els).getTemporal();
 		LabelIF SF = label_f.create();
 		LabelIF ST = label_f.create();
@@ -1446,10 +1512,10 @@ sentenciaifFuncion ::=
 		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
-		LabelFactory label_f = new LabelFactory(scope);
+		LabelFactory label_f = new LabelFactory();
 		TemporalIF temp_act = tf.create();
 		TemporalIF exp_temp = ((Expresion) exp).getTemporal();
-		TemporalIF sents_temp = (((NonTerminal) sents).getTemporal();
+		TemporalIF sents_temp = ((NonTerminal) sents).getTemporal();
 		TemporalIF else_temp = ((NonTerminal) els).getTemporal();
 		LabelIF SF = label_f.create();
 		LabelIF ST = label_f.create();
@@ -1488,7 +1554,7 @@ rellenoifFuncion ::=
 	:}  
 	| epsilon 
 	{:
-		RESULT = new NonTerminal();
+		RESULT = new Expresion();
 	:};
 rellenoif ::=  
 	ALTERNATIVASI DELIMFUNC listaSentencias:sents
@@ -1497,7 +1563,7 @@ rellenoif ::=
 	:} 
 	| epsilon
 	{:
-		RESULT = new NonTerminal();
+		RESULT = new SentenciaGeneral();
 	:};
 
 // for 
@@ -1538,7 +1604,7 @@ sentenciafor ::=
 		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
-		LabelFactory label_f = new LabelFactory(scope);
+		LabelFactory label_f = new LabelFactory();
 		TemporalIF temp_act = tf.create();
 		TemporalIF inf_temp = inferior.getTemporal();
 		TemporalIF sup_temp = superior.getTemporal();
@@ -1611,7 +1677,7 @@ sentenciaforFuncion ::=
 		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
-		LabelFactory label_f = new LabelFactory(scope);
+		LabelFactory label_f = new LabelFactory();
 		TemporalIF temp_act = tf.create();
 		TemporalIF inf_temp = inferior.getTemporal();
 		TemporalIF sup_temp = superior.getTemporal();
@@ -1651,7 +1717,28 @@ sentenciaforFuncion ::=
 
 // escribir. 
 parametroEscribir ::= 
-	STRING 
+	STRING:lex
+	{:
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
+
+		//Creo el código final.
+		Value valor = new Value(((TokenIF) lex).getLexema());
+		icb.addQuadruple("MV", temp_act, valor);
+		icb.addQuadruple("OUT", temp_act);
+		
+		//Creo la sentencia de escribir.
+		SentenciaEscribir escribir = new SentenciaEscribir();
+		
+		//Seteo los temporales y el codigo intermedio de la sentencia.
+		escribir.setTemporal(temp_act);
+		escribir.setIntermediateCode(icb.create());
+		
+		RESULT = escribir;
+	:}
 	| expresion:exp
 	{:
 		//Compruebo que la expresión sea de tipo lógica
@@ -1659,14 +1746,53 @@ parametroEscribir ::=
 		if(!(expresion instanceof ExpresionAritmetica || expresion instanceof PrimitivaAritmetica)){
 			throw new RuntimeException("No se puede establecer como parámetro de salida una expresión de tipo (śolo entera): " + expresion.getClass().getSimpleName());
 		}
-	:} 
-	| epsilon ;
-sentenciaEscribir ::= 
-	ESCRIBIR PIZQUIERDO parametroEscribir:tipo
-	{:
+
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = ((Expresion) exp).getTemporal();
+		
+		//Creo el código intermedio.
+		icb.addQuadruples(((Expresion) exp).getIntermediateCode());
+		icb.addQuadruple("OUT", temp_act);
+
+		//Creo la sentencia de escribir.
+		SentenciaEscribir escribir = new SentenciaEscribir();
+		
+		//Seteo los temporales y el codigo intermedio de la sentencia.
+		escribir.setTemporal(temp_act);
+		escribir.setIntermediateCode(icb.create());
+		
+		RESULT = escribir;
 		
 	:} 
-	PDERECHO DSENTENCIAS;
+	| epsilon 
+	{:
+		//Declaro las instancias necesarias para añadir el código intermedio.
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
+
+		//Creo el código final.
+		Value valor = new Value(null);
+		icb.addQuadruple("MV", temp_act, valor);
+		icb.addQuadruple("OUT", temp_act);
+		
+		//Creo la sentencia de escribir.
+		SentenciaEscribir escribir = new SentenciaEscribir();
+		
+		//Seteo los temporales y el codigo intermedio de la sentencia.
+		escribir.setTemporal(temp_act);
+		escribir.setIntermediateCode(icb.create());
+		
+		RESULT = escribir;
+	:};
+sentenciaEscribir ::= ESCRIBIR PIZQUIERDO parametroEscribir:sent PDERECHO DSENTENCIAS
+	{:
+		RESULT = sent;
+	:};
 
 // devolver
 sentenciaDevolver ::= 

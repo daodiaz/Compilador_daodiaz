@@ -22,8 +22,8 @@ public class PrimitivaAritmetica extends Expresion {
 		this.valor = valor;
 	}
 	
-	public Object getValor() {
-		return valor;	
+	public Integer getValor() {
+		return (Integer) valor;	
 	}
 	
 	public void setNombreVector(String nombre) {
