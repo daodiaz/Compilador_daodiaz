@@ -213,13 +213,14 @@ defconstantes ::=
 		SymbolTableIF syTable = scope.getSymbolTable();
 		TypeTableIF tyTable = scope.getTypeTable();
 		TypeIF tipe;
+		SymbolConstant constante = null;
 		//Obtengo el nombre de la constante.
 		String nombre_constante = ((TokenIF) id).getLexema();
 		//Dependiendo de si es entera o lógica añado la constante a la tabla de simbolos.
 		if(valor instanceof PrimitivaAritmetica){
 			valor = (PrimitivaAritmetica) valor;
 			if(syTable.containsSymbol(nombre_constante)){
-				throw new RuntimeException("Ya existe una constante en este ámbito con el mismo nombre: " + nombre_constante);
+				semanticErrorManager.semanticFatalError("Ya existe una constante en este ámbito con el mismo nombre: " + nombre_constante);
 			}
 			//Compruebo que el tipo haya sido creado con anterioridad, en caso contrario lo creo y lo instancio.
 			if(!scope.getScopeManager().containsType("entero")){
@@ -229,12 +230,12 @@ defconstantes ::=
 				//En caso contrario lo obtengo de la propia tabla de tipos.
 				tipe = tyTable.getType("entero");
 			}	
-			SymbolConstant constante = new SymbolConstant(scope, nombre_constante, tipe);
+			constante = new SymbolConstant(scope, nombre_constante, tipe);
 			syTable.addSymbol(nombre_constante, constante);
 		} else if (valor instanceof PrimitivaLogica){
 			valor = (PrimitivaLogica) valor;
 			if(syTable.containsSymbol(nombre_constante)){
-				throw new RuntimeException("Ya existe una constante en este ámbito con el mismo nombre: " + nombre_constante);
+				semanticErrorManager.semanticFatalError("Ya existe una constante en este ámbito con el mismo nombre: " + nombre_constante);
 			}
 			//Compruebo que el tipo haya sido creado con anterioridad, en caso contrario lo creo y lo instancio.
 			if(!scope.getScopeManager().containsType("boolean")){
@@ -244,13 +245,13 @@ defconstantes ::=
 				//En caso contrario lo obtengo de la propia tabla de tipos.
 				tipe = tyTable.getType("boolean");
 			}	
-			SymbolConstant constante = new SymbolConstant(scope, nombre_constante, tipe);
+			constante = new SymbolConstant(scope, nombre_constante, tipe);
 			syTable.addSymbol(nombre_constante, constante);
 		} else
-			throw new RuntimeException("Las constantes sólo pueden ser enteras o lógicas");
+			semanticErrorManager.semanticFatalError("Las constantes sólo pueden ser enteras o lógicas");
 		
 		//Guardo el valor en la constante.
-		Value value = new Value(valor.getValor());
+		Value value = new Value(((Expresion) valor).getValor());
 		constante.setValor(value);
 	:}
 	| epsilon; 
@@ -280,19 +281,22 @@ seccionconstantes ::=
 
  //Definición de tipos
 deftipos ::=
-	IDEN:id ASIGNACION DECLVECTOR CIZQUIERDO valorango:rango_inf RANGO valorango:rango_sup CDERECHO ASIGNACIONVECTOR tipovector:tipo  DSENTENCIAS deftipos
+	IDEN:id ASIGNACION DECLVECTOR CIZQUIERDO valorango:rang_inf RANGO valorango:rang_sup CDERECHO ASIGNACIONVECTOR tipovector:tipo  DSENTENCIAS deftipos
 	{:
 		System.out.println("Empezando a analizar línea de tipos");
 		//Obtengo el escope y la tabla de simbolos y de tipòs.
 		ScopeIF scope = scopeManager.getCurrentScope();
 		SymbolTableIF syTable = scope.getSymbolTable();
 		TypeTableIF tyTable = scope.getTypeTable();
-		TypeIF tipe;
+		TypeIF tipe = null;
+		Integer rango_inf = ((PrimitivaAritmetica) rang_inf).getValor();
+		Integer rango_sup = ((PrimitivaAritmetica) rang_sup).getValor();
+
 		//Obtengo el nombre del identificador del tipo.
 		String nombre_tipo = ((TokenIF) id).getLexema();
 		//Copmpruebo que no exista ya un tipo con este nombre.
 		if(scope.getScopeManager().containsType(nombre_tipo)){
-			throw new RuntimeException("Ya existe un tipo de usuario creado con el nombre: " + nombre_tipo);
+			semanticErrorManager.semanticFatalError("Ya existe un tipo de usuario creado con el nombre: " + nombre_tipo);
 		}
 		//Obtengo tipo simple que forma parte del compuesto del usuario.
 		if(!scope.getScopeManager().containsType((String) tipo)){
@@ -303,7 +307,7 @@ deftipos ::=
 				tipe = new TypeSimple(scope, "boolean");
 				tyTable.addType(tipe);
 			} else {
-				throw new RuntimeException("Los tipos compuestos sólo pueden estar formados por tipos enteros o lógicos");
+				semanticErrorManager.semanticFatalError("Los tipos compuestos sólo pueden estar formados por tipos enteros o lógicos");
 			}
 		} else {
 			tipe = tyTable.getType((String) tipo);
@@ -344,7 +348,7 @@ valorango ::=
 		icb.addQuadruple("MV", temp_act, valor);
 		
 		//Creo la primitiva.	
-		PrimitivaAritmetica rango = new PrimitivaAritmetica();
+		PrimitivaAritmetica rango = new PrimitivaAritmetica(null,null,null);
 		rango.setValor(Integer.parseInt(((TokenIF) num).getLexema()));
 
 		//Seteo el temporal y el codigo intermedio de la primitiva.
@@ -362,33 +366,32 @@ valorango ::=
 		String nombre_rango = ((TokenIF) id).getLexema();
 		//Compruebo que el identificador exista con anterioridad.
 		if(!scopeManager.containsSymbol(nombre_rango)){
-			throw new RuntimeException("No se puede establecer el rango debido a que no ha sido declarado con anterioridad el simbolo: " + nombre_rango);
+			semanticErrorManager.semanticFatalError("No se puede establecer el rango debido a que no ha sido declarado con anterioridad el simbolo: " + nombre_rango);
 		}
 		//Obtengo el símbolo.
 		SymbolIF rango = scopeManager.searchSymbol(nombre_rango);
-		int valor;
+		int valor = -1;
 		//Compruevo que el simbolo sea de tipo aritmético.
 		if(!rango.getType().getName().equals("entero")){
-			throw new RuntimeException("Sólo se pueden establecer rangos con simbolos enteros, actualmente es: " + rango.getType().getName());
+			semanticErrorManager.semanticFatalError("Sólo se pueden establecer rangos con simbolos enteros, actualmente es: " + rango.getType().getName());
 		}
 		//Compruebo que tenga valor asociado.
 		if(rango instanceof SymbolVariable){
 			if(((SymbolVariable) rango).getValue() == null){
-				throw new RuntimeException("Aunque el simbolo " + nombre_rango + " entero está declarado con anterioridad, aún no se le ha asignado un valor, actualmente es null, no se puede crear un rango de dimensión null");
+				semanticErrorManager.semanticFatalError("Aunque el simbolo " + nombre_rango + " entero está declarado con anterioridad, aún no se le ha asignado un valor, actualmente es null, no se puede crear un rango de dimensión null");
 			}
 			//Obtengo el valor del simbolo entero obtenido.
 			valor = Integer.parseInt(((SymbolVariable) rango).getValue());
 		} else if(rango instanceof SymbolConstant) {
 			if(((SymbolConstant) rango).getValue() == null){
-				throw new RuntimeException("Aunque el simbolo " + nombre_rango + " entero está declarado con anterioridad, aún no se le ha asignado un valor, actualmente es null, no se puede crear un rango de dimensión null");
+				semanticErrorManager.semanticFatalError("Aunque el simbolo " + nombre_rango + " entero está declarado con anterioridad, aún no se le ha asignado un valor, actualmente es null, no se puede crear un rango de dimensión null");
 			}
 			valor = Integer.parseInt(((SymbolConstant) rango).getValue());
 		} else {
-			throw new RuntimeException("En este punto sólo se espera un símboloo variable o constante, no de otro tipo");
+			semanticErrorManager.semanticFatalError("En este punto sólo se espera un símboloo variable o constante, no de otro tipo");
 		}
 
 		//Declaro las instancias necesarias para añadir el código intermedio.
-		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
 		TemporalIF temp_act = tf.create();
@@ -398,14 +401,14 @@ valorango ::=
 		icb.addQuadruple("MV", temp_act, val);
 		
 		//Creo la primitiva.	
-		PrimitivaAritmetica rango = new PrimitivaAritmetica();
-		rango.setValor(valor);
+		PrimitivaAritmetica rang = new PrimitivaAritmetica(null,null,null);
+		rang.setValor(valor);
 
 		//Seteo el temporal y el codigo intermedio de la primitiva.
-		rango.setTemporal(temp_act);
-		rango.setIntermediateCode(icb.create());
+		rang.setTemporal(temp_act);
+		rang.setIntermediateCode(icb.create());
 
-		RESULT = rango;
+		RESULT = rang;
 	:} 
 	| miembrovector:mv
 	{:
@@ -424,7 +427,7 @@ valorango ::=
 			
 		
 			//Creo la primitiva.	
-			PrimitivaAritmetica vector = new PrimitivaAritmetica();
+			PrimitivaAritmetica vector = new PrimitivaAritmetica(null,null,null);
 		
 			//Seteo el temporal y el codigo intermedio de la primitiva.
 			vector.setTemporal(temp_act);
@@ -432,7 +435,7 @@ valorango ::=
 
 			RESULT = vector;
 		} else
-			throw new RuntimeException("Sólo se pueden instanciar rangos con enteros, actualmente la expresión vectorial es: " + mv.getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("Sólo se pueden instanciar rangos con enteros, actualmente la expresión vectorial es: " + mv.getClass().getSimpleName());
 		
 	:};
 secciontipos ::= COMIENZODECLTIPOS deftipos {:System.out.println("Sección de tipos analizada");:} | epsilon; 
@@ -469,7 +472,7 @@ selectorvalororeferencia ::=
 		} else if(exp instanceof Parametro){
 			RESULT = exp;
 		} else {
-			throw new RuntimeException("Sólo se pueden utilizar como parámetros o variables enteros o tipos lógicos, actualmente: " + exp.getClass().getSimpleName());	
+			semanticErrorManager.semanticFatalError("Sólo se pueden utilizar como parámetros o variables enteros o tipos lógicos, actualmente: " + exp.getClass().getSimpleName());	
 		}
 	:}
 	|	PARAMETROVALOR IDEN:id
@@ -507,7 +510,7 @@ defvariables ::=
 		//Obtengo los nombres de las variables en declaración en esta línea.
 		ArrayList<Parametro> elementos = ListaVariables.getVariables();
 		//Según el nombre del tipo guardo el tipo.
-		TypeIF tipe;
+		TypeIF tipe = null;
 		//Cola de variables declaradas, usado solo al analizar paramteros de funciones.
 		ArrayList<SymbolIF> variables = new ArrayList<SymbolIF>();
 		boolean vector = false;
@@ -533,7 +536,7 @@ defvariables ::=
 				break;
 			default:
 				if(!scope.getScopeManager().containsType((String) tipo)){
-					throw new RuntimeException("No se puede declarar variables con tipos de usuario no declarados anteriormente, declara el tipo antes de usarlo: " + (String) tipo);
+					semanticErrorManager.semanticFatalError("No se puede declarar variables con tipos de usuario no declarados anteriormente, declara el tipo antes de usarlo: " + (String) tipo);
 				} else {
 					tipe = scopeManager.searchType((String) tipo);
 					vector = true;
@@ -543,11 +546,11 @@ defvariables ::=
 		//Creo un símbolo para cada una de ellas según su tipo y nombre y la añado a la tabla de símbolos.
 		for(Parametro elemento : elementos){
 			if(elemento.getNombre() == null)
-				throw new RuntimeException("Error al extraer lexema de identificador en linea de declaración de variables");
+				semanticErrorManager.semanticFatalError("Error al extraer lexema de identificador en linea de declaración de variables");
 			String nombre_variable = elemento.getNombre();
 			if((boolean) puntocoma){
 				if(syTable.containsSymbol(nombre_variable)){
-					throw new RuntimeException("Ya existe una variable en este ámbito con el mismo nombre: " + nombre_variable);
+					semanticErrorManager.semanticFatalError("Ya existe una variable en este ámbito con el mismo nombre: " + nombre_variable);
 				}
 				SymbolVariable variable = new SymbolVariable(scope, nombre_variable, tipe);
 				//Si la variable declarada ha tenido un var precediendole entonces es por referencia y le seteo dicha información.
@@ -600,7 +603,7 @@ tiporetornofuncion ::=
 		String nombre_tipo = ((TokenIF) id).getLexema();
 		//Compruebo que el tipo ya haya sido declarado en la scope, sino, lanzo error.
 		if(!scopeManager.containsType(nombre_tipo)){
-			throw new RuntimeException("No se puede crear una función con un tipo de retorno no declarado, declare el tipo: " + nombre_tipo);
+			semanticErrorManager.semanticFatalError("No se puede crear una función con un tipo de retorno no declarado, declare el tipo: " + nombre_tipo);
 		}
 		RESULT = nombre_tipo;
 	:} 
@@ -687,10 +690,10 @@ funcion ::= DECLAREFUNCION IDEN:id
 		//Obtengo el devolver declarado en la función.
 		//Compruebo que se ha producido un devolver correcto.
 		if(!SymbolFunction.getDevolverDeclarado()){
-			throw new RuntimeException("No se ha explicitado un devolver en la función: " + ((TokenIF) id).getLexema());
+			semanticErrorManager.semanticFatalError("No se ha explicitado un devolver en la función: " + ((TokenIF) id).getLexema());
 		} else if(!SymbolFunction.comprobarTiposDevolver((String) retorno)){
 			SymbolFunction.clearTiposDevolver();
-			throw new RuntimeException("Al menos un tipo devolver explicitado en la función " + ((TokenIF) id).getLexema() + " no es del tipo declarado: " + (String) retorno);
+			semanticErrorManager.semanticFatalError("Al menos un tipo devolver explicitado en la función " + ((TokenIF) id).getLexema() + " no es del tipo declarado: " + (String) retorno);
 		} else
 			//Reseteo los tipos devolver para futuras funciones.
 			SymbolFunction.clearTiposDevolver();
@@ -743,7 +746,7 @@ expresion ::=
 			RESULT= exp_logica;
 		}
 		else
-			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("No se puedem mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
 	:}
 	|  expresion:vi IGUALDAD  expresion:vd
 		{:
@@ -773,7 +776,7 @@ expresion ::=
 			RESULT= exp_logica;
 		}
 		else
-			throw new RuntimeException("No se puedem mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("No se puedem mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
 	:}
 	| IDEN:id
 	{:
@@ -792,9 +795,10 @@ expresion ::=
 			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 			TemporalFactoryIF tf = new TemporalFactory(scope);
 			TemporalIF temp_act = tf.create();
+			Variable variable;
 
 			//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser parte de una expresión.
-			Expresion primitiva;
+			Expresion primitiva = null;
 			switch(identificador.getClass().getSimpleName()){
 				case "SymbolConstant":
 					if(identificador.getType().getName().equals("entero")){
@@ -813,18 +817,13 @@ expresion ::=
 						RESULT = primitiva;
 					}
 					else
-						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros.");
+						semanticErrorManager.semanticFatalError("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros.");
 					
 					//Creo el codigo intermedio.
 					Value value = new Value(((SymbolConstant) identificador).getValor());
 					icb.addQuadruple("MV", temp_act, value);
 					break;
 				case "SymbolParameter":
-					//Compruebo que la variable haya sido inicializada.
-					if(!identificador.getValue()){
-						throw new RuntimeException("No se puede utilizar una variable no inicializada dentro de una expresión, antes hay que asignarle un valor");
-					}
-
 					if(identificador.getType().getName().equals("entero")){
 						//Creo la primitiva en el caso de que el tipo de la constante sea entera.
 						primitiva = new PrimitivaAritmetica(null,null,null); 
@@ -840,17 +839,17 @@ expresion ::=
 						RESULT = primitiva;
 					} 
 					else
-						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
+						semanticErrorManager.semanticFatalError("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
 
 					//Creo el codigo intermedio.
-					Variable variable = new Variable(identificador.getName(), scope); 
+					variable = new Variable(identificador.getName(), scope); 
 					icb.addQuadruple("MVA", temp_act, variable);
 
 					break;
 				case "SymbolVariable":
 					//Compruebo que la variable haya sido inicializada.
-					if(!identificador.getValue()){
-						throw new RuntimeException("No se puede utilizar una variable no inicializada dentro de una expresión, antes hay que asignarle un valor");
+					if(!((SymbolVariable)identificador).isInit()){
+						semanticErrorManager.semanticFatalError("No se puede utilizar una variable no inicializada dentro de una expresión, antes hay que asignarle un valor");
 					}
 
 					if(identificador.getType().getName().equals("entero")){
@@ -868,13 +867,13 @@ expresion ::=
 						RESULT = primitiva;
 					} 
 					else
-						throw new RuntimeException("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
+						semanticErrorManager.semanticFatalError("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
 					//Creo el codigo intermedio.
-					Variable variable = new Variable(identificador.getName(), scope); 
+					variable = new Variable(identificador.getName(), scope); 
 					icb.addQuadruple("MVA", temp_act, variable);					
 					break;
 				default:
-					throw new RuntimeException("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión.");
+					semanticErrorManager.semanticFatalError("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión.");
 			}	
 			//Seteo el codigo intermedio y el temporal de la nueva expresión.
 			primitiva.setTemporal(temp_act);
@@ -894,22 +893,25 @@ expresion ::=
 		String lexema = ((TokenIF) f).getLexema();
 		//Compruebo que no es un procedimiento pues no puede ser parte de una expresión.
 		if(f instanceof SymbolProcedure){
-			throw new RuntimeException("No está permitido el uso de procedimientos como parte de una expresión.");
+			semanticErrorManager.semanticFatalError("No está permitido el uso de procedimientos como parte de una expresión.");
 		}
-		SymbolFunction funcion;
+		SymbolFunction funcion = null;
 		//Compruebo y obtengo la función de la tabla de símbolos.
 		if(scopeManager.containsSymbol(lexema)){
 			funcion = (SymbolFunction) scopeManager.searchSymbol(lexema);
 		}
 		else
-			throw new RuntimeException("No existe ninguna función con nombre " + lexema);
+			semanticErrorManager.semanticFatalError("No existe ninguna función con nombre " + lexema);
+		
+		SentenciaFuncion sent_funcion = new SentenciaFuncion(funcion);
+
 		//Obtengo las instancias necesarias para el codigo intermedio.
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
-		TemporalIF temp_f = funcion.getTemporal();
+		TemporalIF temp_f = sent_funcion.getTemporal();
 		TemporalIF temp_act = tf.create();
 
-		Expresion primitiva;
+		Expresion primitiva = null;
 		//Según el tipo de la función creo un tipo de expresión u otra.
 		switch(funcion.getReturn().getName()){
 			case "entero":
@@ -923,10 +925,10 @@ expresion ::=
 				//primitiva.setValorLogico(Boolean.valueOf(funcion.getValue()));
 				break;
 			default:
-				throw new RuntimeException("Las funciones con este tipo de retorno " + funcion.getType().getName() + " no pueden formar parte de una expresión.");		
+				semanticErrorManager.semanticFatalError("Las funciones con este tipo de retorno " + funcion.getType().getName() + " no pueden formar parte de una expresión.");		
 		}
 		//Creo el codigo intermedio.
-		icb.addQuadruples(funcion.getIntermediateCode());
+		icb.addQuadruples(sent_funcion.getIntermediateCode());
 		icb.addQuadruple("MV", temp_act, temp_f);
 
 		//Seteo el codigo intermedio y temporal a la primitiva actual.
@@ -1038,7 +1040,7 @@ expresionlvl2 ::=
 			RESULT=  exp_arit;
 		}
 		else
-			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
 	:}
 	| expresionlvl3:lvl3
 	{:
@@ -1086,7 +1088,7 @@ expresionlvl3 ::=
 			RESULT= exp_log;
 		}
 		else
-			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
 	:}
 	| expresion:vi PRODUCTO expresion:vd 
 	{:  
@@ -1116,7 +1118,7 @@ expresionlvl3 ::=
 			RESULT= exp_arit;
 		}
 		else
-			throw new RuntimeException("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("No se pueden mezclar tipos de expresiones: " + ((Expresion) vi).getClass().getSimpleName() + " con " + ((Expresion) vd).getClass().getSimpleName());
 	:}
 	| expresionlvl4:lvl4
 	{:
@@ -1149,7 +1151,7 @@ expresionlvl4 ::=
 			RESULT= exp_logica;
 		}
 		else
-			throw new RuntimeException("Una expresión de tipo " + ( (Expresion) vd).getClass().getSimpleName() + " no puede ser parte de una expresión lógica de negación.");
+			semanticErrorManager.semanticFatalError("Una expresión de tipo " + ( (Expresion) vd).getClass().getSimpleName() + " no puede ser parte de una expresión lógica de negación.");
 	:}
 	| expresionlvl5:lvl5 
 	{:
@@ -1183,14 +1185,16 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 			vector = scopeManager.searchSymbol(nombre_vector);
 			//Compruebo que no se haya pasado de dimensión el rango proporcionado (>=).
 			if((int) rango >= ((TypeArray) vector.getType()).getRango()){
-				throw new RuntimeException("Intento de acceso al array " + nombre_vector + " fuera de rango, su tamaño es " + ((TypeArray) vector.getType())
+				semanticErrorManager.semanticFatalError("Intento de acceso al array " + nombre_vector + " fuera de rango, su tamaño es " + ((TypeArray) vector.getType())
 .getRango() + " y se trata de acceder al miembro " + (int) rango);
 			}
 			tipo_array = (TypeArray) scopeManager.searchSymbol(nombre_vector).getType();
-		} else
-			throw new RuntimeException("No se ha encontrado un vector con el nombre: " + nombre_vector);		
+		} else{
+			semanticErrorManager.semanticFatalError("No se ha encontrado un vector con el nombre: " + nombre_vector);
+			tipo_array = null;
+		}		
 		//Según el tipo del vector creo un tipo de expresión u otra. TODO IMPLEMENTACION getName() en TypeArray.
-		Expresion primitiva;
+		Expresion primitiva = null;
 		
 		switch(tipo_array.getTypeSimple().getName()){
 			case "entero":
@@ -1207,10 +1211,10 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 				((PrimitivaLogica) primitiva).setNombreVector(nombre_vector);
 				break;
 			default:
-				throw new RuntimeException("Los vectores solo pueden estar conformados de enteros o lógicos, actualmente: " + tipo_array.getTypeSimple());
-		
+				semanticErrorManager.semanticFatalError("Los vectores solo pueden estar conformados de enteros o lógicos, actualmente: " + tipo_array.getTypeSimple());
+		}
+
 		//Obtengo el scope y las variables necsarias para setear el codigo intermedio.
-		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
 		TemporalIF temp_p = ((PrimitivaAritmetica) prim).getTemporal();
@@ -1224,8 +1228,7 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 		primitiva.setTemporal(temp_act);
 		primitiva.setIntermediateCode(icb.create());
 		
-		RESULT = primitiva;
-		}		
+		RESULT = primitiva;		
 	:};
  
 // sentencias de asignacion
@@ -1245,16 +1248,18 @@ parteizquierdaasignacion ::=
 			System.out.println("Variable encontrada en la tabla de símbolos de tipo: " + identificador.getType().getName());
 			//Si es una contante lo que hay en la parte izquierda; no está permitido. 
 			if(identificador instanceof SymbolConstant){
-				throw new RuntimeException("No se puede realizar una asignación de una constante");
+				semanticErrorManager.semanticFatalError("No se puede realizar una asignación de una constante");
 			}
 		}
-		else
-			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
+		else{
+			semanticErrorManager.semanticFatalError("No existe ningún símbolo con nombre " + lexema);
+			identificador = null;
+		}
 		//Compruebo si el identificador corresponde a una variable o a un parámetro (que se comporta como una variable especial en este caso).
 		if(identificador.getClass().getSimpleName().equals("SymbolVariable") || identificador.getClass().getSimpleName().equals("SymbolParameter")){
 			RESULT = identificador;
 		} else
-			throw new RuntimeException("No se puede utilizar en una sentencia de asignación un símbolo de tipo: " + identificador.getClass().getName());
+			semanticErrorManager.semanticFatalError("No se puede utilizar en una sentencia de asignación un símbolo de tipo: " + identificador.getClass().getName());
 	:} 
 	| miembrovector:mv
 	{:
@@ -1269,47 +1274,46 @@ parteizquierdaasignacion ::=
 		} else if (mv instanceof PrimitivaLogica){
 			lexema = ((PrimitivaLogica) mv).getNombreVector();
 		} else {
-			throw new RuntimeException("En este punto sólo se espera la llegada de una primitiva aritmética o lógica");
+			semanticErrorManager.semanticFatalError("En este punto sólo se espera la llegada de una primitiva aritmética o lógica");
+			lexema = null;
 		}
 		SymbolIF vector;
 		if(scopeManager.containsSymbol(lexema)){
 			vector = scopeManager.searchSymbol(lexema);
 		}
-		else
-			throw new RuntimeException("No existe ningún símbolo con nombre " + lexema);
+		else{
+			semanticErrorManager.semanticFatalError("No existe ningún símbolo con nombre " + lexema);
+			vector = null;
+		}
 		RESULT = vector;
 	:};
-sentenciadeasignacion ::= parteizquierdaasignacion:pi ASIGNACION parametroasignacion:pd DSENTENCIAS
+sentenciadeasignacion ::= parteizquierdaasignacion:piz ASIGNACION parametroasignacion:pde DSENTENCIAS
 	{:
 		System.out.println("Empezando a analizar asignación");
-		if(pd instanceof Parametro){
-			throw new RuntimeException("El identificador no se ha encontrado en la tabla de simbolos: " + ((Parametro)pd).getNombre());
-		}
-		if(pi instanceof SymbolVariable){
-			pi = (SymbolVariable) pi;
-		}
 		
-		if(pi instanceof SymbolParameter) {
-			pi = (SymbolParameter) pi;
+		if(pde instanceof Parametro){
+			semanticErrorManager.semanticFatalError("El identificador no se ha encontrado en la tabla de simbolos: " + ((Parametro)pde).getNombre());
 		}
 
-		pd = (Expresion) pd;
+		SymbolBase pi = (SymbolBase) piz;
+		Expresion pd = (Expresion) pde;
 
-		System.out.println("El tipo de la expresión derecha es: " + pd.getType());
+		SentenciaAsignacion asign = null;
+		//System.out.println("El tipo de la expresión derecha es: " + pd.getType());
 		//Compruebo si concuerdan los tipos de la parte izquierda y derecha y qué tipòs son, según sea seteo la SentenciaAsignacion.
 		if((pi.getType().getName().equals("entero")) && (pd.getType().equals("entero"))){			
-			SentenciaAsignacion asign = new SentenciaAsignacion(pi, pd, "entero");
+			asign = new SentenciaAsignacion(pi, pd, "entero");
 			System.out.println("Sentencia de asignación entera analizada");
 		} else if(pi.getType().getName().equals("boolean") && pd.getType().equals("boolean")){
-			SentenciaAsignacion asign = new SentenciaAsignacion((SymbolIF) pi,(Expresion) pd,"boolean");
+			asign = new SentenciaAsignacion((SymbolIF) pi,(Expresion) pd,"boolean");
 			System.out.println("Sentencia de asignación booleana analizada");
 		//En el caso de miembros de vectores la cosa se complica un poco, compruebo que primero sea un array y luego que su tiempo simple sea igual a la expresión de la derecha.
 		} else if((pi.getType() instanceof TypeArray) && ((TypeArray) pi.getType()).getTypeSimple().getName().equals(pd.getType())) {
-			SentenciaAsignacion asign = new SentenciaAsignacion((SymbolIF) pi, (Expresion) pd,"miembro_vector");
+			asign = new SentenciaAsignacion((SymbolIF) pi, (Expresion) pd,"miembro_vector");
 			System.out.println("Sentencia de asignación a miembro de vector añadida");
 		} else
 			//System.out.println(((SymbolIF) pi).getType().getName() + "     tiposimple" + ((TypeArray) ((SymbolIF) pi).getType()).getTypeSimple().getName);
-			throw new RuntimeException("No se puede asignar a una variable de tipo " + ((SymbolIF) pi).getType().getName() + " una expresión de tipo " + ((Expresion) pd).getType());
+			semanticErrorManager.semanticFatalError("No se puede asignar a una variable de tipo " + ((SymbolIF) pi).getType().getName() + " una expresión de tipo " + ((Expresion) pd).getType());
 		
 		//Instancio lo necesario parea crear el código intermedio.
 		ScopeIF scope = scopeManager.getCurrentScope();
@@ -1323,17 +1327,17 @@ sentenciadeasignacion ::= parteizquierdaasignacion:pi ASIGNACION parametroasigna
 			
 		//Creo el código intermedio.
 		icb.addQuadruples(pd.getIntermediateCode());
-		icb.addQuadruple("MV", tmp_act, pd_temp);
+		icb.addQuadruple("MV", temp_act, pd_temp);
 		//OJO! guardo en la dirección de la variable el temporal.
 		icb.addQuadruple("STA", variable, pd_temp);
 
 		//Seteo el temporal y el codigo intermedio en asignacion.
-		asign.setTemporal(tmp_act);
+		asign.setTemporal(temp_act);
 		asign.setIntermediateCode(icb.create());
 
 		//Guardo true en el simbolo de la variable para saber que ya se ha inicializado.
-		pi.setValue(true);
-
+		if(pi instanceof SymbolVariable)
+			((SymbolVariable) pi).setIsInit(true);
 		RESULT = asign;
 	:}; 
 parametroasignacion ::= expresion:ex
@@ -1377,26 +1381,26 @@ llamadafuncion ::=
 						Parametro parametro = itpar.next();
 						String nombre_parametro = parametro.getNombre();
 						String tipo_declarado = itdecl.next().getType().getName();
-						String tipo_parametro;
+						String tipo_parametro = null;
 						//Si el nombre del paramtero es null y tiene un tipo seteado, el tipo de paramtero lo obtengo directamente.
 						if(nombre_parametro == null && parametro.getTipo() != null){
 							tipo_parametro = parametro.getTipo();
 						//Sino compruebo que exista el simbolo con el nombre del parametro obtenido
 						} else if(nombre_parametro != null && !scopeManager.containsSymbol(nombre_parametro)){
-							throw new RuntimeException("No se ha encontrado el simbolo que corresponde al nombre del parametro: " + nombre_parametro);
+							semanticErrorManager.semanticFatalError("No se ha encontrado el simbolo que corresponde al nombre del parametro: " + nombre_parametro);
 						//En tal caso obtengo su tipo
 						} else if (nombre_parametro != null && scopeManager.containsSymbol(nombre_parametro)){
 							tipo_parametro = scopeManager.searchSymbol(nombre_parametro).getType().getName();
 						} else
-							throw new RuntimeException("No se ha indicado correctamente el parametro en la llamada a función");
+							semanticErrorManager.semanticFatalError("No se ha indicado correctamente el parametro en la llamada a función");
 						//Y ya puedo comprobar si los tipos concuerdan. 
 						if(!tipo_declarado.equals(tipo_parametro)){
-							throw new RuntimeException("El tipo del parametro no se corresponde con el esperado: " + tipo_parametro + " encontrado y " + tipo_declarado  + " esperado");
+							semanticErrorManager.semanticFatalError("El tipo del parametro no se corresponde con el esperado: " + tipo_parametro + " encontrado y " + tipo_declarado  + " esperado");
 						}
 					}
 					System.out.println("Tipos de los parametros son los esperados");
 				} else
-					throw new RuntimeException("No se han declarado los suficientes parametros en la llamada a funcion: " + parametros.size() + " esperados y " + ListaVariables.getVariables().size() + " obtenidos");
+					semanticErrorManager.semanticFatalError("No se han declarado los suficientes parametros en la llamada a funcion: " + parametros.size() + " esperados y " + ListaVariables.getVariables().size() + " obtenidos");
 			} else if (simbolo instanceof SymbolProcedure){
 				ArrayList<SymbolIF> parametros = ((SymbolProcedure) simbolo).getParametros();
 				System.out.println("Obtenidos sus parametros: " + parametros.size());
@@ -1409,31 +1413,31 @@ llamadafuncion ::=
 						Parametro parametro = itpar.next();
 						String nombre_parametro = parametro.getNombre();
 						String tipo_declarado = itdecl.next().getType().getName();
-						String tipo_parametro;
+						String tipo_parametro = null;
 						//Si el nombre del paramtero es null y tiene un tipo seteado, el tipo de paramtero lo obtengo directamente.
 						if(nombre_parametro == null && parametro.getTipo() != null){
 							tipo_parametro = parametro.getTipo();
 						//Sino compruebo que exista el simbolo con el nombre del parametro obtenido
 						} else if(nombre_parametro != null && !scopeManager.containsSymbol(nombre_parametro)){
-							throw new RuntimeException("No se ha encontrado el simbolo que corresponde al nombre del parametro: " + nombre_parametro);
+							semanticErrorManager.semanticFatalError("No se ha encontrado el simbolo que corresponde al nombre del parametro: " + nombre_parametro);
 						//En tal caso obtengo su tipo
 						} else if (nombre_parametro != null && scopeManager.containsSymbol(nombre_parametro)){
 							tipo_parametro = scopeManager.searchSymbol(nombre_parametro).getType().getName();
 						} else
-							throw new RuntimeException("No se ha indicado correctamente el parametro en la llamada a procedimiento");
+							semanticErrorManager.semanticFatalError("No se ha indicado correctamente el parametro en la llamada a procedimiento");
 						//Y ya puedo comprobar si los tipos concuerdan. 
 						if(!tipo_declarado.equals(tipo_parametro)){
-							throw new RuntimeException("El tipo del parametro no se corresponde con el esperado: " + tipo_parametro + " encontrado y " + tipo_declarado  + " esperado");
+							semanticErrorManager.semanticFatalError("El tipo del parametro no se corresponde con el esperado: " + tipo_parametro + " encontrado y " + tipo_declarado  + " esperado");
 						}
 					}
 					System.out.println("Tipos de los parametros son los esperados");
 				} else
-					throw new RuntimeException("No se han declarado los suficientes parametros en la llamada a procedimiento: " + parametros.size() + " esperados y " + ListaVariables.getVariables().size() + " obtenidos");
+					semanticErrorManager.semanticFatalError("No se han declarado los suficientes parametros en la llamada a procedimiento: " + parametros.size() + " esperados y " + ListaVariables.getVariables().size() + " obtenidos");
 			} else 
-				throw new RuntimeException("No se ha encontrado declarada una función procedimiento con el nombre: " + nombre);
+				semanticErrorManager.semanticFatalError("No se ha encontrado declarada una función procedimiento con el nombre: " + nombre);
 			RESULT = simbolo;
 		} else
-			throw new RuntimeException("No se ha encontrado declarada una función procedimiento con el nombre: " + nombre);
+			semanticErrorManager.semanticFatalError("No se ha encontrado declarada una función procedimiento con el nombre: " + nombre);
 		
 		//Limipio la lista de variables de nuevo.
 		ListaVariables.clearVariables();
@@ -1442,7 +1446,7 @@ sentenciallamadafuncion ::= llamadafuncion:funcvsproc DSENTENCIAS
 	{:
 		//Compruebo que sea un procedimiento, en otro caso devuelvo error.
 		if(!(funcvsproc instanceof SymbolProcedure)){
-			throw new RuntimeException("No se puede utilizar una llamada a función como sentencia, sólo procedimientos");
+			semanticErrorManager.semanticFatalError("No se puede utilizar una llamada a función como sentencia, sólo procedimientos");
 		}
 	:};
 
@@ -1453,7 +1457,7 @@ sentenciaif ::=
 		//Compruebo que la expresión sea de tipo lógica
 		Expresion expresion = (Expresion) exp;
 		if(!(expresion instanceof ExpresionLogica || expresion instanceof PrimitivaLogica)){
-			throw new RuntimeException("No se puede establecer como condición de una sentencia condicional una expresión de tipo (sólo lógica): " + expresion.getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("No se puede establecer como condición de una sentencia condicional una expresión de tipo (sólo lógica): " + expresion.getClass().getSimpleName());
 		}
 	:} 
 	STARTIF DELIMFUNC listaSentencias:sents rellenoif:els FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS
@@ -1471,7 +1475,7 @@ sentenciaif ::=
 		LabelIF ST = label_f.create();
 			
 		//Creo el código intermedio.
-		icv.addAuadruples(((Expresion) exp).getIntermediateCode());
+		icb.addQuadruples(((Expresion) exp).getIntermediateCode());
 		//En el caso de que no sea cierta la expresión salta a la expresión else.
 		icb.addQuadruple("BRF", exp_temp, SF);
 		//Compruebo de que exista sentencias en el if (puede ser epsilon).
@@ -1487,7 +1491,7 @@ sentenciaif ::=
 			icb.addQuadruple("BR", ST);
 		icb.addQuadruples(((NonTerminal) els).getIntermediateCode());
 		//Salto para llegar al final sin ejecutar el if y/o el else.
-		icv.addQuadruple("INL", ST);
+		icb.addQuadruple("INL", ST);
 		
 		//Creo la sentencia condicional.
 		SentenciaCondicional cond = new SentenciaCondicional();
@@ -1503,7 +1507,7 @@ sentenciaifFuncion ::=
 		//Compruebo que la expresión sea de tipo lógica
 		Expresion expresion = (Expresion) exp;
 		if(!(expresion instanceof ExpresionLogica || expresion instanceof PrimitivaLogica)){
-			throw new RuntimeException("No se puede establecer como condición de una sentencia condicional una expresión de tipo (sólo lógica): " + expresion.getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("No se puede establecer como condición de una sentencia condicional una expresión de tipo (sólo lógica): " + expresion.getClass().getSimpleName());
 		}
 	:}  
 	STARTIF DELIMFUNC listaSentenciasFuncion:sents rellenoifFuncion:els  FINBLOQUESENTENCIAS COMIENZOSI DSENTENCIAS
@@ -1521,7 +1525,7 @@ sentenciaifFuncion ::=
 		LabelIF ST = label_f.create();
 			
 		//Creo el código intermedio.
-		icv.addAuadruples(((Expresion) exp).getIntermediateCode());
+		icb.addQuadruples(((Expresion) exp).getIntermediateCode());
 		//En el caso de que no sea cierta la expresión salta a la expresión else.
 		icb.addQuadruple("BRF", exp_temp, SF);
 		//Compruebo de que exista sentencias en el if (puede ser epsilon).
@@ -1537,7 +1541,7 @@ sentenciaifFuncion ::=
 			icb.addQuadruple("BR", ST);
 		icb.addQuadruples(((NonTerminal) els).getIntermediateCode());
 		//Salto para llegar al final sin ejecutar el if y/o el else.
-		icv.addQuadruple("INL", ST);
+		icb.addQuadruple("INL", ST);
 		
 		//Creo la sentencia condicional.
 		SentenciaCondicional cond = new SentenciaCondicional();
@@ -1554,7 +1558,7 @@ rellenoifFuncion ::=
 	:}  
 	| epsilon 
 	{:
-		RESULT = new Expresion();
+		RESULT = new SentenciaGeneral();
 	:};
 rellenoif ::=  
 	ALTERNATIVASI DELIMFUNC listaSentencias:sents
@@ -1576,23 +1580,23 @@ sentenciafor ::=
 		if(scopeManager.containsSymbol(nombre_identificador)){
 			variable = scopeManager.searchSymbol(nombre_identificador);
 			if(!(variable instanceof SymbolVariable)){
-				throw new RuntimeException("Sólo se puede utilizar como variable una variable, actualmente: " + variable.getClass().getSimpleName());
+				semanticErrorManager.semanticFatalError("Sólo se puede utilizar como variable una variable, actualmente: " + variable.getClass().getSimpleName());
 			}
 		} else
-			throw new RuntimeException("No se ha encontrado declarado el símbolo: " + nombre_identificador);
+			semanticErrorManager.semanticFatalError("No se ha encontrado declarado el símbolo: " + nombre_identificador);
 	:}
 	RANGOBUCLEPARA expresion:rango_inf RANGO expresion:rango_sup
 	{:
 		if(rango_inf instanceof Parametro)
-			throw new RuntimeException("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_inf).getNombre());
+			semanticErrorManager.semanticFatalError("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_inf).getNombre());
 		if(rango_sup instanceof Parametro)
-			throw new RuntimeException("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_sup).getNombre());
+			semanticErrorManager.semanticFatalError("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_sup).getNombre());
 
 		Expresion inferior = (Expresion) rango_inf;
 		Expresion superior = (Expresion) rango_sup;
 		//Compruebo que las expresiones sean de tipo aritméticas
 		if(!((inferior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica) && (superior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica)))
-			throw new RuntimeException("Las expresiones que conformar los rangos deben de ser aritméticas, actualmente: " + inferior.getClass().getSimpleName() + " (rango inferior) y " + superior.getClass().getSimpleName() + " (rango superior)");
+			semanticErrorManager.semanticFatalError("Las expresiones que conformar los rangos deben de ser aritméticas, actualmente: " + inferior.getClass().getSimpleName() + " (rango inferior) y " + superior.getClass().getSimpleName() + " (rango superior)");
 		
 	:}
 	DELIMFUNC listaSentencias:sents FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS
@@ -1650,23 +1654,23 @@ sentenciaforFuncion ::=
 		if(scopeManager.containsSymbol(nombre_identificador)){
 			variable = scopeManager.searchSymbol(nombre_identificador);
 			if(!(variable instanceof SymbolVariable)){
-				throw new RuntimeException("Sólo se puede utilizar como variable una variable, actualmente: " + variable.getClass().getSimpleName());
+				semanticErrorManager.semanticFatalError("Sólo se puede utilizar como variable una variable, actualmente: " + variable.getClass().getSimpleName());
 			}
 		} else
-			throw new RuntimeException("No se ha encontrado declarado el símbolo: " + nombre_identificador);
+			semanticErrorManager.semanticFatalError("No se ha encontrado declarado el símbolo: " + nombre_identificador);
 	:}
 	RANGOBUCLEPARA expresion:rango_inf RANGO expresion:rango_sup
 	{:
 		if(rango_inf instanceof Parametro)
-			throw new RuntimeException("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_inf).getNombre());
+			semanticErrorManager.semanticFatalError("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_inf).getNombre());
 		if(rango_sup instanceof Parametro)
-			throw new RuntimeException("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_sup).getNombre());
+			semanticErrorManager.semanticFatalError("No se ha encontrado el simbolo del rango: " + ((Parametro) rango_sup).getNombre());
 
 		Expresion inferior = (Expresion) rango_inf;
 		Expresion superior = (Expresion) rango_sup;
 		//Compruebo que las expresiones sean de tipo aritméticas
 		if(!((inferior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica) && (superior instanceof ExpresionAritmetica || inferior instanceof PrimitivaAritmetica)))
-			throw new RuntimeException("Las expresiones que conformar los rangos deben de ser aritméticas, actualmente: " + inferior.getClass().getSimpleName() + " (rango inferior) y " + superior.getClass().getSimpleName() + " (rango superior)");
+			semanticErrorManager.semanticFatalError("Las expresiones que conformar los rangos deben de ser aritméticas, actualmente: " + inferior.getClass().getSimpleName() + " (rango inferior) y " + superior.getClass().getSimpleName() + " (rango superior)");
 	:} 
 	DELIMFUNC listaSentenciasFuncion:sents FINBLOQUESENTENCIAS COMIENZOBUCLEPARA DSENTENCIAS
 	{:
@@ -1744,7 +1748,7 @@ parametroEscribir ::=
 		//Compruebo que la expresión sea de tipo lógica
 		Expresion expresion = (Expresion) exp;
 		if(!(expresion instanceof ExpresionAritmetica || expresion instanceof PrimitivaAritmetica)){
-			throw new RuntimeException("No se puede establecer como parámetro de salida una expresión de tipo (śolo entera): " + expresion.getClass().getSimpleName());
+			semanticErrorManager.semanticFatalError("No se puede establecer como parámetro de salida una expresión de tipo (śolo entera): " + expresion.getClass().getSimpleName());
 		}
 
 		//Declaro las instancias necesarias para añadir el código intermedio.
@@ -1799,7 +1803,7 @@ sentenciaDevolver ::=
 	FRETURN expresion:exp DSENTENCIAS
 	{:
 		if(exp instanceof Parametro)
-			throw new RuntimeException("No se ha encontrado el simbolo en la sentencia devolver: " + ((Parametro) exp).getNombre());
+			semanticErrorManager.semanticFatalError("No se ha encontrado el simbolo en la sentencia devolver: " + ((Parametro) exp).getNombre());
 		//¿¿HAY QUE ASEGURARSE QUE SE VAYA A EJECUTAR UN DEVOLVER EN CADA IF,ETC??
 		String tipo = ((Expresion) exp).getType();
 		System.out.println("LLegada a sentencia devolver de tipo: " + ((Expresion) exp).getType());

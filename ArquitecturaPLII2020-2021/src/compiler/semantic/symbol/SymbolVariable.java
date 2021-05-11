@@ -17,6 +17,7 @@ public class SymbolVariable
     private String value;
     //Falso o null por valor, true por referencia.
     private boolean valvsref;
+    private boolean isInit;
     
     /**
      * Constructor for SymbolVariable.
@@ -29,6 +30,7 @@ public class SymbolVariable
                            TypeIF type)
     {
         super (scope, name, type);
+        isInit = false;
     } 
     
     public void setValue(String value) {
@@ -41,5 +43,13 @@ public class SymbolVariable
     
     public void setValVSRef(boolean bandera) {
     	valvsref = bandera;
+    }
+    
+    public boolean isInit() {
+    	return isInit;
+    }
+    
+    public void setIsInit(boolean bool) {
+    	isInit = bool;
     }
 }
