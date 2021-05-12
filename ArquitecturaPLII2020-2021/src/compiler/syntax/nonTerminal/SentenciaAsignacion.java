@@ -2,7 +2,7 @@ package compiler.syntax.nonTerminal;
 
 import es.uned.lsi.compiler.semantic.symbol.SymbolIF;
 
-public class SentenciaAsignacion extends NonTerminal {
+public class SentenciaAsignacion extends SentenciaGeneral {
 	private SymbolIF parte_izquierda;
 	private Expresion parte_derecha;
 	private String tipo;

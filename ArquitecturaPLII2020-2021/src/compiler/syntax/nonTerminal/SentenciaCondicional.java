@@ -1,5 +1,5 @@
 package compiler.syntax.nonTerminal;
 
-public class SentenciaCondicional extends NonTerminal {
+public class SentenciaCondicional extends SentenciaGeneral {
 
 }

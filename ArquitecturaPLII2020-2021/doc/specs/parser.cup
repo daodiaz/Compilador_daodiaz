@@ -190,8 +190,16 @@ program ::=
   		// en las llamadas a cupTest si el compilador no está completo. Esto es debido a que 
   		// aún no se tendrá implementada la generación de código intermedio ni final.
   		// Para la entrega final deberán descomentarse y usarse.
-  		
-  		syntaxErrorManager.syntaxInfo ("Parsing process ended.");
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		
+		icb.addQuadruples(((Axiom) ax).getIntermediateCode());
+
+  		syntaxErrorManager.syntaxInfo("Análisis semántico terminado ahora en copia código intermedio;");
+        for (QuadrupleIF quadruple : icb.create()) {
+          syntaxErrorManager.syntaxInfo(quadruple.toString());
+        }
+        syntaxErrorManager.syntaxInfo("Parsing process ended.");
    :};
 
 axiom ::= 
@@ -199,7 +207,18 @@ axiom ::=
 		System.out.println("Iniciando análisis programa principal");
 		scopeManager.openScope("Principal");
 	:} 
-	defprincipal;
+	defprincipal:principal 
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		
+		icb.addQuadruples(((ProgramaPrincipal) principal).getIntermediateCode());
+
+		Axiom ax = new AxiomIMPL();
+		ax.setIntermediateCode(icb.create());
+
+		RESULT = ax;
+	:};
 
 epsilon ::=;
 
@@ -713,9 +732,18 @@ seccionsubprograma ::=COMIENZOSUBPROGRAMAS
 	defsubprograma  | epsilon ;
 
 // Definición de programa principal
-defprincipal ::= COMIENZOPROGRAMA IDEN DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO listaSentencias FINBLOQUESENTENCIAS FINPROGRAMA 
+defprincipal ::= COMIENZOPROGRAMA IDEN DELIMFUNC seccionconstantes secciontipos seccionvariables seccionsubprograma COMIENZO listaSentencias:sentencias FINBLOQUESENTENCIAS FINPROGRAMA 
 	{:
-		scopeManager.closeScope();
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		
+		icb.addQuadruples(((SentenciaGeneral) sentencias).getIntermediateCode());
+
+		ProgramaPrincipal principal = new ProgramaPrincipal();
+		
+		principal.setIntermediateCode(icb.create());
+		
+		RESULT = principal;
 	:};
 
 expresion ::=  
@@ -890,20 +918,13 @@ expresion ::=
 		//Hay que obtener la función relacionada a llamadafuncion
 		ScopeIF scope = scopeManager.getCurrentScope();
 		SymbolTableIF syTable = scope.getSymbolTable();
-		String lexema = ((TokenIF) f).getLexema();
+		SymbolIF funcion = ((SentenciaFuncion) f).getSymbol();
+		SentenciaFuncion sent_funcion = (SentenciaFuncion) f;
+
 		//Compruebo que no es un procedimiento pues no puede ser parte de una expresión.
-		if(f instanceof SymbolProcedure){
+		if(funcion instanceof SymbolProcedure){
 			semanticErrorManager.semanticFatalError("No está permitido el uso de procedimientos como parte de una expresión.");
 		}
-		SymbolFunction funcion = null;
-		//Compruebo y obtengo la función de la tabla de símbolos.
-		if(scopeManager.containsSymbol(lexema)){
-			funcion = (SymbolFunction) scopeManager.searchSymbol(lexema);
-		}
-		else
-			semanticErrorManager.semanticFatalError("No existe ninguna función con nombre " + lexema);
-		
-		SentenciaFuncion sent_funcion = new SentenciaFuncion(funcion);
 
 		//Obtengo las instancias necesarias para el codigo intermedio.
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
@@ -913,7 +934,7 @@ expresion ::=
 
 		Expresion primitiva = null;
 		//Según el tipo de la función creo un tipo de expresión u otra.
-		switch(funcion.getReturn().getName()){
+		switch(((SymbolFunction) funcion).getReturn().getName()){
 			case "entero":
 				//Creo una PrimitivaAritmetica.
 				primitiva = new PrimitivaAritmetica(null,null,null);
@@ -925,7 +946,7 @@ expresion ::=
 				//primitiva.setValorLogico(Boolean.valueOf(funcion.getValue()));
 				break;
 			default:
-				semanticErrorManager.semanticFatalError("Las funciones con este tipo de retorno " + funcion.getType().getName() + " no pueden formar parte de una expresión.");		
+				semanticErrorManager.semanticFatalError("Las funciones con este tipo de retorno " + ((SymbolFunction) funcion).getType().getName() + " no pueden formar parte de una expresión.");		
 		}
 		//Creo el codigo intermedio.
 		icb.addQuadruples(sent_funcion.getIntermediateCode());
@@ -983,7 +1004,37 @@ expresion ::=
 	:}
 	| miembrovector:v
 	{:
-		RESULT = v;
+		//Según el tipo del vector creo un tipo de expresión u otra. TODO IMPLEMENTACION getName() en TypeArray.
+		Expresion primitiva = null;
+		
+		switch(((TypeArray)((Array) v).getSymbol().getType()).getTypeSimple().getName()){
+			case "entero":
+				//Creo una PrimitivaAritmetica.
+				primitiva = new PrimitivaAritmetica(null,null,null);
+				//int valor_miembro = ((int) vector.getArray()[(int) rango]);
+				//primitiva.setValor(valor_miembro);
+				((PrimitivaAritmetica) primitiva).setNombreVector(((Array) v).getSymbol().getName());
+				break;
+			case "boolean": 
+				primitiva = new PrimitivaLogica(null,null,null);
+				//boolean valor_miembro = ((boolean) vector.getArray()[(int) rango]);
+				//primitiva.setValorLogico(valor_miembro);
+				((PrimitivaLogica) primitiva).setNombreVector(((Array) v).getSymbol().getName());
+				break;
+			default:
+				semanticErrorManager.semanticFatalError("Los vectores solo pueden estar conformados de enteros o lógicos, actualmente: " + ((TypeArray)((Array) v).getSymbol().getType()).getTypeSimple().getName());
+		}
+
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+
+		icb.addQuadruples(((Array) v).getIntermediateCode());
+		
+		primitiva.setTemporal(((Array) v).getTemporal());
+		primitiva.setIntermediateCode(icb.create());
+		
+		RESULT = primitiva;
 	:}
 	| NUM:num
 	{:
@@ -1027,7 +1078,7 @@ expresionlvl2 ::=
 			
 			//Creo el código intermedio.
 			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
-			icb.addQuadruples(((Expresion) vi).getIntermediateCode());
+			icb.addQuadruples(((Expresion) vd).getIntermediateCode());
 			icb.addQuadruple("ADD", temp_act, vi_temp, vd_temp);
 			
 			//Creo la expresión aritmética.
@@ -1177,7 +1228,7 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 		ScopeIF scope = scopeManager.getCurrentScope();
 		SymbolTableIF syTable = scope.getSymbolTable();
 		String nombre_vector = ((TokenIF) id).getLexema();
-		SymbolIF vector; 
+		SymbolIF vector = null; 
 		TypeArray tipo_array;
 		int rango = ((PrimitivaAritmetica) prim).getValor();
 
@@ -1193,26 +1244,8 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 			semanticErrorManager.semanticFatalError("No se ha encontrado un vector con el nombre: " + nombre_vector);
 			tipo_array = null;
 		}		
-		//Según el tipo del vector creo un tipo de expresión u otra. TODO IMPLEMENTACION getName() en TypeArray.
-		Expresion primitiva = null;
-		
-		switch(tipo_array.getTypeSimple().getName()){
-			case "entero":
-				//Creo una PrimitivaAritmetica.
-				primitiva = new PrimitivaAritmetica(null,null,null);
-				//int valor_miembro = ((int) vector.getArray()[(int) rango]);
-				//primitiva.setValor(valor_miembro);
-				((PrimitivaAritmetica) primitiva).setNombreVector(nombre_vector);
-				break;
-			case "boolean": 
-				primitiva = new PrimitivaLogica(null,null,null);
-				//boolean valor_miembro = ((boolean) vector.getArray()[(int) rango]);
-				//primitiva.setValorLogico(valor_miembro);
-				((PrimitivaLogica) primitiva).setNombreVector(nombre_vector);
-				break;
-			default:
-				semanticErrorManager.semanticFatalError("Los vectores solo pueden estar conformados de enteros o lógicos, actualmente: " + tipo_array.getTypeSimple());
-		}
+
+		Array array = new Array(vector);
 
 		//Obtengo el scope y las variables necsarias para setear el codigo intermedio.
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
@@ -1225,10 +1258,10 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 		icb.addQuadruple("MVP", temp_act, temp_p);
 		
 		//Seteo el temporal y el codigointermedio de primitiva
-		primitiva.setTemporal(temp_act);
-		primitiva.setIntermediateCode(icb.create());
+		array.setTemporal(temp_act);
+		array.setIntermediateCode(icb.create());
 		
-		RESULT = primitiva;		
+		RESULT = array;		
 	:};
  
 // sentencias de asignacion
@@ -1264,28 +1297,8 @@ parteizquierdaasignacion ::=
 	| miembrovector:mv
 	{:
 		System.out.println("Obteniendo parte vectorial izquierda de asignación");
-		//Obtengo el simbolo del array del que forma parte el miembro.
-		ScopeIF scope = scopeManager.getCurrentScope();
-		SymbolTableIF syTable = scope.getSymbolTable();
-		String lexema;
-		//Obtengo el nombre del vector
-		if(mv instanceof PrimitivaAritmetica){
-			lexema = ((PrimitivaAritmetica) mv).getNombreVector();
-		} else if (mv instanceof PrimitivaLogica){
-			lexema = ((PrimitivaLogica) mv).getNombreVector();
-		} else {
-			semanticErrorManager.semanticFatalError("En este punto sólo se espera la llegada de una primitiva aritmética o lógica");
-			lexema = null;
-		}
-		SymbolIF vector;
-		if(scopeManager.containsSymbol(lexema)){
-			vector = scopeManager.searchSymbol(lexema);
-		}
-		else{
-			semanticErrorManager.semanticFatalError("No existe ningún símbolo con nombre " + lexema);
-			vector = null;
-		}
-		RESULT = vector;
+		//Devuelvo el array.
+		RESULT = mv;
 	:};
 sentenciadeasignacion ::= parteizquierdaasignacion:piz ASIGNACION parametroasignacion:pde DSENTENCIAS
 	{:
@@ -1295,25 +1308,7 @@ sentenciadeasignacion ::= parteizquierdaasignacion:piz ASIGNACION parametroasign
 			semanticErrorManager.semanticFatalError("El identificador no se ha encontrado en la tabla de simbolos: " + ((Parametro)pde).getNombre());
 		}
 
-		SymbolBase pi = (SymbolBase) piz;
 		Expresion pd = (Expresion) pde;
-
-		SentenciaAsignacion asign = null;
-		//System.out.println("El tipo de la expresión derecha es: " + pd.getType());
-		//Compruebo si concuerdan los tipos de la parte izquierda y derecha y qué tipòs son, según sea seteo la SentenciaAsignacion.
-		if((pi.getType().getName().equals("entero")) && (pd.getType().equals("entero"))){			
-			asign = new SentenciaAsignacion(pi, pd, "entero");
-			System.out.println("Sentencia de asignación entera analizada");
-		} else if(pi.getType().getName().equals("boolean") && pd.getType().equals("boolean")){
-			asign = new SentenciaAsignacion((SymbolIF) pi,(Expresion) pd,"boolean");
-			System.out.println("Sentencia de asignación booleana analizada");
-		//En el caso de miembros de vectores la cosa se complica un poco, compruebo que primero sea un array y luego que su tiempo simple sea igual a la expresión de la derecha.
-		} else if((pi.getType() instanceof TypeArray) && ((TypeArray) pi.getType()).getTypeSimple().getName().equals(pd.getType())) {
-			asign = new SentenciaAsignacion((SymbolIF) pi, (Expresion) pd,"miembro_vector");
-			System.out.println("Sentencia de asignación a miembro de vector añadida");
-		} else
-			//System.out.println(((SymbolIF) pi).getType().getName() + "     tiposimple" + ((TypeArray) ((SymbolIF) pi).getType()).getTypeSimple().getName);
-			semanticErrorManager.semanticFatalError("No se puede asignar a una variable de tipo " + ((SymbolIF) pi).getType().getName() + " una expresión de tipo " + ((Expresion) pd).getType());
 		
 		//Instancio lo necesario parea crear el código intermedio.
 		ScopeIF scope = scopeManager.getCurrentScope();
@@ -1321,23 +1316,61 @@ sentenciadeasignacion ::= parteizquierdaasignacion:piz ASIGNACION parametroasign
 		TemporalFactoryIF tf = new TemporalFactory(scope);
 		TemporalIF pd_temp = pd.getTemporal();
 		TemporalIF temp_act = tf.create();
-		
-		//Creo la variable a la que se le va a guardar el temporal de la expresión.
-		Variable variable = new Variable(pi.getName(), scope);
+
+		SentenciaAsignacion asign = null;
+
+		if(piz instanceof SymbolBase){
+			SymbolBase pi = (SymbolBase) piz;
 			
-		//Creo el código intermedio.
-		icb.addQuadruples(pd.getIntermediateCode());
-		icb.addQuadruple("MV", temp_act, pd_temp);
-		//OJO! guardo en la dirección de la variable el temporal.
-		icb.addQuadruple("STA", variable, pd_temp);
 
-		//Seteo el temporal y el codigo intermedio en asignacion.
-		asign.setTemporal(temp_act);
-		asign.setIntermediateCode(icb.create());
+			//System.out.println("El tipo de la expresión derecha es: " + pd.getType());
+			//Compruebo si concuerdan los tipos de la parte izquierda y derecha y qué tipòs son, según sea seteo la SentenciaAsignacion.
+			if((pi.getType().getName().equals("entero")) && (pd.getType().equals("entero"))){			
+				asign = new SentenciaAsignacion(pi, pd, "entero");
+				System.out.println("Sentencia de asignación entera analizada");
+			} else if(pi.getType().getName().equals("boolean") && pd.getType().equals("boolean")){
+				asign = new SentenciaAsignacion((SymbolIF) pi,(Expresion) pd,"boolean");
+				System.out.println("Sentencia de asignación booleana analizada");
+			} else
+				//System.out.println(((SymbolIF) pi).getType().getName() + "     tiposimple" + ((TypeArray) ((SymbolIF) pi).getType()).getTypeSimple().getName);
+				semanticErrorManager.semanticFatalError("No se puede asignar a una variable de tipo " + ((SymbolIF) pi).getType().getName() + " una expresión de tipo " + ((Expresion) pd).getType());
+		
+			//Creo la variable a la que se le va a guardar el temporal de la expresión.
+			Variable variable = new Variable(pi.getName(), scope);
+			
+			//Creo el código intermedio.
+			icb.addQuadruples(pd.getIntermediateCode());
+			//OJO! guardo en la dirección de la variable el temporal.
+			icb.addQuadruple("STA", variable, pd_temp);
 
+			//Seteo el temporal y el codigo intermedio en asignacion.
+			asign.setIntermediateCode(icb.create());
+		} else {
+			String pi = ((TypeArray)((Array) piz).getSymbol().getType()).getTypeSimple().getName();
+			
+			//Compruebo si concuerdan los tipos de la parte izquierda y derecha y qué tipòs son, según sea seteo la SentenciaAsignacion.
+			if((pi.equals("entero")) && (pd.getType().equals("entero"))){			
+				asign = new SentenciaAsignacion(((Array) piz).getSymbol(), pd, "entero");
+				System.out.println("Sentencia de asignación entera analizada");
+			} else if(pi.equals("boolean") && pd.getType().equals("boolean")){
+				asign = new SentenciaAsignacion(((Array) piz).getSymbol(),(Expresion) pd,"boolean");
+				System.out.println("Sentencia de asignación booleana analizada");
+			} else
+				//System.out.println(((SymbolIF) pi).getType().getName() + "     tiposimple" + ((TypeArray) ((SymbolIF) pi).getType()).getTypeSimple().getName);
+				semanticErrorManager.semanticFatalError("No se puede asignar a una variable de tipo " + pi + " una expresión de tipo " + ((Expresion) pd).getType());
+			
+			icb.addQuadruples(((Array) piz).getIntermediateCode());
+			icb.addQuadruples(pd.getIntermediateCode());
+			icb.addQuadruple("STP", ((Array) piz).getTemporal(), pd_temp);
+			
+			//Seteo el temporal y el codigo intermedio en asignacion.
+			asign.setIntermediateCode(icb.create());
+		}
+		
 		//Guardo true en el simbolo de la variable para saber que ya se ha inicializado.
-		if(pi instanceof SymbolVariable)
-			((SymbolVariable) pi).setIsInit(true);
+		if(piz instanceof SymbolVariable)
+			((SymbolVariable) piz).setIsInit(true);
+
 		RESULT = asign;
 	:}; 
 parametroasignacion ::= expresion:ex
@@ -1348,10 +1381,146 @@ parametroasignacion ::= expresion:ex
 
 
 // Sentencias
-sentencia ::= sentenciadeasignacion | sentenciaif | sentenciafor | sentenciaEscribir | sentenciallamadafuncion ;
-sentenciaFuncion ::= sentenciadeasignacion | sentenciaifFuncion | sentenciaforFuncion | sentenciaEscribir | sentenciallamadafuncion | sentenciaDevolver;
-listaSentencias ::= sentencia  listaSentencias | epsilon;
-listaSentenciasFuncion ::= sentenciaFuncion listaSentenciasFuncion | epsilon;
+sentencia ::= 
+	sentenciadeasignacion:sent
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:}
+	| sentenciaif:sent
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:}
+	| sentenciafor:sent 
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:}
+	| sentenciaEscribir:sent
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:}
+	| sentenciallamadafuncion:sent
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:};
+	
+sentenciaFuncion ::= 
+	sentenciadeasignacion:sent 
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:}
+	| sentenciaifFuncion:sent
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:} 
+	| sentenciaforFuncion:sent 
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:}
+	| sentenciaEscribir:sent
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:}
+	| sentenciallamadafuncion:sent
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:} 
+	| sentenciaDevolver:sent
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+        ((SentenciaGeneral) sent).setIntermediateCode(icb.create());
+
+        RESULT = sent;
+	:};
+listaSentencias ::= 
+	sentencia:sent listaSentencias:sentencias 
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		
+		if(sentencias == null){
+			sentencias = new SentenciaGeneral();
+			icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+			((SentenciaGeneral) sentencias).setIntermediateCode(icb.create());
+		} else {
+			icb.addQuadruples(((SentenciaGeneral) sentencias).getIntermediateCode());
+			icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+			((SentenciaGeneral) sentencias).setIntermediateCode(icb.create());
+		}
+
+		RESULT = sentencias;
+	:}
+	| epsilon;
+listaSentenciasFuncion ::= 
+	sentenciaFuncion:sent listaSentenciasFuncion:sentencias 
+	{:
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+				
+		if(sentencias == null){
+			sentencias = new SentenciaGeneral();
+			icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+			((SentenciaGeneral) sentencias).setIntermediateCode(icb.create());
+		} else {
+			icb.addQuadruples(((SentenciaGeneral) sentencias).getIntermediateCode());
+			icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+			((SentenciaGeneral) sentencias).setIntermediateCode(icb.create());
+		}
+
+		RESULT = sentencias;
+	:}
+	| epsilon;
 
 // llamada a función
 parametrofuncionoproc ::=     listavariables ;
@@ -1435,7 +1604,9 @@ llamadafuncion ::=
 					semanticErrorManager.semanticFatalError("No se han declarado los suficientes parametros en la llamada a procedimiento: " + parametros.size() + " esperados y " + ListaVariables.getVariables().size() + " obtenidos");
 			} else 
 				semanticErrorManager.semanticFatalError("No se ha encontrado declarada una función procedimiento con el nombre: " + nombre);
-			RESULT = simbolo;
+			
+			SentenciaFuncion sent_funcion = new SentenciaFuncion(simbolo);
+			RESULT = sent_funcion;
 		} else
 			semanticErrorManager.semanticFatalError("No se ha encontrado declarada una función procedimiento con el nombre: " + nombre);
 		
@@ -1445,9 +1616,12 @@ llamadafuncion ::=
 sentenciallamadafuncion ::= llamadafuncion:funcvsproc DSENTENCIAS
 	{:
 		//Compruebo que sea un procedimiento, en otro caso devuelvo error.
-		if(!(funcvsproc instanceof SymbolProcedure)){
+		if(!(((SentenciaFuncion) funcvsproc).getSymbol() instanceof SymbolProcedure)){
 			semanticErrorManager.semanticFatalError("No se puede utilizar una llamada a función como sentencia, sólo procedimientos");
 		}
+		//PENDIENTE CREAR EL CODIGO INTERMEDIO.
+
+		RESULT = funcvsproc;
 	:};
 
 // if
@@ -1804,11 +1978,31 @@ sentenciaDevolver ::=
 	{:
 		if(exp instanceof Parametro)
 			semanticErrorManager.semanticFatalError("No se ha encontrado el simbolo en la sentencia devolver: " + ((Parametro) exp).getNombre());
-		//¿¿HAY QUE ASEGURARSE QUE SE VAYA A EJECUTAR UN DEVOLVER EN CADA IF,ETC??
+
+		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
+		TemporalIF exp_temp = ((Expresion) exp).getTemporal();
+
+		//Establezco que la funcion llega a una sentencia devolver.
 		String tipo = ((Expresion) exp).getType();
 		System.out.println("LLegada a sentencia devolver de tipo: " + ((Expresion) exp).getType());
 		SymbolFunction.addTipoDevolver(tipo);
 		SymbolFunction.setDevolverDeclarado(true);
+		
+		//Creo el código intermedio.
+		icb.addQuadruples(((Expresion) exp).getIntermediateCode());
+		icb.addQuadruple("MV", temp_act, exp_temp);
+
+		//Creo la sentencia de devolver.
+		SentenciaDevolver devolver = new SentenciaDevolver();
+		
+		//Seteo los temporales y el codigo intermedio de la sentencia.
+		devolver.setTemporal(temp_act);
+		devolver.setIntermediateCode(icb.create());
+		
+		RESULT = devolver;
 	:};
 
 

@@ -1,5 +1,5 @@
 package compiler.syntax.nonTerminal;
 
-public class SentenciaFor extends NonTerminal {
+public class SentenciaFor extends SentenciaGeneral {
 
 }

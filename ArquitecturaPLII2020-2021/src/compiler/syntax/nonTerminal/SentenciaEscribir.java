@@ -1,5 +1,5 @@
 package compiler.syntax.nonTerminal;
 
-public class SentenciaEscribir extends NonTerminal {
+public class SentenciaEscribir extends SentenciaGeneral {
 
 }
