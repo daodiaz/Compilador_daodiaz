@@ -36,4 +36,8 @@ public class Parametro {
 		public boolean esPrimitiva() {
 			return primitiva;
 		}
+		
+		public void setNombre(String nombre) {
+			this.nombre = nombre;
+		}
 }

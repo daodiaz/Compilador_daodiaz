@@ -279,18 +279,22 @@ valorconstante ::=
 	{:
 		System.out.println("Analizando declaración de constante lógica falsa");
 		PrimitivaLogica primitiva = new PrimitivaLogica(null, null, null);
+		primitiva.setValorLogico(false);
 		RESULT= primitiva;
 	:}
 	| CIERTO 
 	{:
 		System.out.println("Analizando declaración de constante lógica cierta");
 		PrimitivaLogica primitiva = new PrimitivaLogica(null, null, null);
+		primitiva.setValorLogico(true);
 		RESULT= primitiva;
 	:}
-	| NUM 
+	| NUM:num 
 	{:
 		System.out.println("Analizando declaración de constante aritmética");
 		PrimitivaAritmetica primitiva = new PrimitivaAritmetica(null,null,null);
+		Integer valor = Integer.parseInt(((TokenIF) num).getLexema());
+		primitiva.setValor(valor);
 		RESULT= primitiva;
 	:};
 seccionconstantes ::= 
@@ -481,11 +485,27 @@ selectorvalororeferencia ::=
 		Parametro parametro;
 		//Compruebo el tipo de expresión que se me devuelve.
 		//Si es una expresion aritmetica estamos ante un parametro de llamada a función de tipo entero
-		if(exp instanceof PrimitivaAritmetica || exp instanceof ExpresionAritmetica){
+		System.out.println("Valor por referencia de clase: " + exp.getClass().getSimpleName());
+		
+		if(exp instanceof ExpresionAritmetica){
 			parametro = new Parametro("entero");		
 			RESULT = parametro;
-		} else if (exp instanceof PrimitivaLogica || exp instanceof ExpresionLogica) {
+		} else if(exp instanceof PrimitivaAritmetica ){
+			System.out.println("Nombre valor por referencia: " + ((PrimitivaAritmetica) exp).getNombre());
+			parametro = new Parametro("entero");
+			if(((PrimitivaAritmetica) exp).getNombre() != null){
+				parametro.setNombre(((PrimitivaAritmetica) exp).getNombre());
+			}
+			System.out.println("Nombre de parametro: " + parametro.getNombre());		
+			RESULT = parametro;
+		} else if (exp instanceof ExpresionLogica) {
 			parametro = new Parametro("boolean");
+			RESULT = parametro;
+		} else if(exp instanceof PrimitivaLogica) {
+			parametro = new Parametro("boolean");	
+			if(((PrimitivaLogica) exp).getNombre() != null){
+				parametro.setNombre(((PrimitivaLogica) exp).getNombre());
+			}	
 			RESULT = parametro;
 		//En caso de que estemos ante un Parametro es posible que estemos en una declaración de una línea. Devuelvo el parámetro.
 		} else if(exp instanceof Parametro){
@@ -750,7 +770,7 @@ expresion ::=
 	expresion:vi MENORQUE  expresion:vd
 	{:
 		//Compruebo que ambas expresiones son o bien lógicas o bien primitivas lógicas.
-		if(((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))){
+		if(((vi instanceof PrimitivaAritmetica) ||(vi instanceof ExpresionAritmetica)) && ((vd instanceof PrimitivaAritmetica) ||	(vd instanceof ExpresionAritmetica))){
 			//Declaro las instancias necesarias para añadir el código intermedio.
 			ScopeIF scope = scopeManager.getCurrentScope();
 			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
@@ -770,7 +790,7 @@ expresion ::=
 			//Seteo el temporal actual y su código intermedio en la nueva expresión lógica.
 			exp_logica.setTemporal(temp_act);
 			exp_logica.setIntermediateCode(icb.create());
-
+			
 			RESULT= exp_logica;
 		}
 		else
@@ -780,7 +800,7 @@ expresion ::=
 		{:
 		System.out.println("Analizando parte de expresión");
 		//Compruebo que ambas expresiones son o bien lógicas o bien primitivas lógicas.
-		if(((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))){
+		if((((vi instanceof ExpresionLogica) ||(vi instanceof PrimitivaLogica)) && ((vd instanceof ExpresionLogica) ||	(vd instanceof PrimitivaLogica))) || ((vi instanceof PrimitivaAritmetica) ||(vi instanceof ExpresionAritmetica)) && ((vd instanceof PrimitivaAritmetica) ||	(vd instanceof ExpresionAritmetica)) ){
 			//Declaro las instancias necesarias para añadir el código intermedio.
 			ScopeIF scope = scopeManager.getCurrentScope();
 			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
@@ -816,17 +836,16 @@ expresion ::=
 		SymbolIF identificador;
 		//Compruebo y obtengo el sombolo del identificador.
 		if(scopeManager.containsSymbol(lexema)){
-			System.out.println("Identificador encontrado: " + ((TokenIF) id).getLexema());
 			identificador = scopeManager.searchSymbol(((TokenIF) id).getLexema());
+			System.out.println("Identificador encontrado: " + ((TokenIF) id).getLexema() + " de clase " + identificador.getClass().getSimpleName() + " y tipo " + identificador.getType().getName());
 			
 			//Obtengo las instancias necesarias para el codigo intermedio.
 			IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 			TemporalFactoryIF tf = new TemporalFactory(scope);
 			TemporalIF temp_act = tf.create();
 			Variable variable;
-
-			//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser parte de una expresión.
 			Expresion primitiva = null;
+			//Ahora hay que determinar qué tipo de símbolo es, según el tipo habrá que ver si es compatible con ser parte de una expresión.
 			switch(identificador.getClass().getSimpleName()){
 				case "SymbolConstant":
 					if(identificador.getType().getName().equals("entero")){
@@ -835,21 +854,25 @@ expresion ::=
 						//primitiva.setValor(Integer.parseInt(identificador.getValue()));
 						//Añado el nombre del identificador a la primitiva.
 						((PrimitivaAritmetica) primitiva).setNombre(lexema);
-						RESULT = primitiva;
+						System.out.println("Nombre de la primitiva: " + ((PrimitivaAritmetica) primitiva).getNombre());
 					}
 					else if(identificador.getType().getName().equals("boolean")){
 						//HAY QUE IMPLEMENTAR getValue() en simbolos constantes.
 						primitiva = new PrimitivaLogica(null,null,null);
 						//primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
 						((PrimitivaLogica) primitiva).setNombre(lexema);
-						RESULT = primitiva;
 					}
 					else
 						semanticErrorManager.semanticFatalError("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros.");
 					
 					//Creo el codigo intermedio.
-					Value value = new Value(((SymbolConstant) identificador).getValor());
-					icb.addQuadruple("MV", temp_act, value);
+					icb.addQuadruple("MV", temp_act, ((SymbolConstant) identificador).getValor());
+					System.out.println("Primera cuadrupla de expresion if: " + ((SymbolConstant) identificador).getValue());
+					//Seteo el codigo intermedio y el temporal de la nueva expresión.
+					primitiva.setTemporal(temp_act);
+					primitiva.setIntermediateCode(icb.create());
+					
+					RESULT = primitiva;		
 					break;
 				case "SymbolParameter":
 					if(identificador.getType().getName().equals("entero")){
@@ -857,14 +880,12 @@ expresion ::=
 						primitiva = new PrimitivaAritmetica(null,null,null); 
 						//primitiva.setValor(Integer.parseInt(identificador.getValue()));
 						((PrimitivaAritmetica) primitiva).setNombre(lexema);
-						RESULT = primitiva;
 					}
 					else if(identificador.getType().getName().equals("boolean")){
 						//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
 						primitiva = new PrimitivaLogica(null,null,null);
 						//primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
 						((PrimitivaLogica) primitiva).setNombre(lexema);
-						RESULT = primitiva;
 					} 
 					else
 						semanticErrorManager.semanticFatalError("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
@@ -873,6 +894,11 @@ expresion ::=
 					variable = new Variable(identificador.getName(), scope); 
 					icb.addQuadruple("MVA", temp_act, variable);
 
+					//Seteo el codigo intermedio y el temporal de la nueva expresión.
+					primitiva.setTemporal(temp_act);
+					primitiva.setIntermediateCode(icb.create());
+				
+					RESULT = primitiva;		
 					break;
 				case "SymbolVariable":
 					//Compruebo que la variable haya sido inicializada.
@@ -885,27 +911,27 @@ expresion ::=
 						primitiva = new PrimitivaAritmetica(null,null,null); 
 						//primitiva.setValor(Integer.parseInt(identificador.getValue()));
 						((PrimitivaAritmetica) primitiva).setNombre(lexema);
-						RESULT = primitiva;
 					}
 					else if(identificador.getType().getName().equals("boolean")){
 						//HAY QUE IMPLEMENTAR getValue() en simbolos variables.
 						primitiva = new PrimitivaLogica(null,null,null);
 						//primitiva.setValorLogico(Boolean.valueOf(identificador.getValue()));
 						((PrimitivaLogica) primitiva).setNombre(lexema);
-						RESULT = primitiva;
 					} 
 					else
 						semanticErrorManager.semanticFatalError("No se puede utilizar una constante de tipo " + identificador.getType().getName() + " como parte de una expresión aritmética o lógica, sólo está permitido enteros o primitivas lógicas.");
 					//Creo el codigo intermedio.
 					variable = new Variable(identificador.getName(), scope); 
 					icb.addQuadruple("MVA", temp_act, variable);					
+					
+					//Seteo el codigo intermedio y el temporal de la nueva expresión.
+					primitiva.setTemporal(temp_act);
+					primitiva.setIntermediateCode(icb.create());
+					RESULT = primitiva;			
 					break;
 				default:
 					semanticErrorManager.semanticFatalError("No se puede utilizar un símbolo de tipo " + identificador.getClass().getSimpleName() + " como parte de una expresión.");
 			}	
-			//Seteo el codigo intermedio y el temporal de la nueva expresión.
-			primitiva.setTemporal(temp_act);
-			primitiva.setIntermediateCode(icb.create());		
 		}
 		else {
 			//Puede que sea un identificador que se esté declarando justamente ahora.
@@ -1252,9 +1278,11 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 		TemporalFactoryIF tf = new TemporalFactory(scope);
 		TemporalIF temp_p = ((PrimitivaAritmetica) prim).getTemporal();
 		TemporalIF temp_act = tf.create();
-			
+		int size = tipo_array.getTypeSimple().getSize();
+	
 		//Creo el codigo intermedio necesario. Primero el ya añadido hasta le momento y ñuego el que añade esta operación.
 		icb.addQuadruples(((PrimitivaAritmetica) prim).getIntermediateCode());
+		icb.addQuadruple("MUL", temp_p, temp_p, size);
 		icb.addQuadruple("MVP", temp_act, temp_p);
 		
 		//Seteo el temporal y el codigointermedio de primitiva
@@ -1331,6 +1359,9 @@ sentenciadeasignacion ::= parteizquierdaasignacion:piz ASIGNACION parametroasign
 			} else if(pi.getType().getName().equals("boolean") && pd.getType().equals("boolean")){
 				asign = new SentenciaAsignacion((SymbolIF) pi,(Expresion) pd,"boolean");
 				System.out.println("Sentencia de asignación booleana analizada");
+			} else if(pi.getType().getName().equals(pd.getType())){
+				asign = new SentenciaAsignacion((SymbolIF) pi,(Expresion) pd, pd.getType());
+				System.out.println("Sentencia de asignación vector analizada: " + pd.getType());
 			} else
 				//System.out.println(((SymbolIF) pi).getType().getName() + "     tiposimple" + ((TypeArray) ((SymbolIF) pi).getType()).getTypeSimple().getName);
 				semanticErrorManager.semanticFatalError("No se puede asignar a una variable de tipo " + ((SymbolIF) pi).getType().getName() + " una expresión de tipo " + ((Expresion) pd).getType());
@@ -1498,7 +1529,7 @@ listaSentencias ::=
 			icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
 			((SentenciaGeneral) sentencias).setIntermediateCode(icb.create());
 		}
-
+		
 		RESULT = sentencias;
 	:}
 	| epsilon;
@@ -1653,26 +1684,28 @@ sentenciaif ::=
 		//En el caso de que no sea cierta la expresión salta a la expresión else.
 		icb.addQuadruple("BRF", exp_temp, SF);
 		//Compruebo de que exista sentencias en el if (puede ser epsilon).
-		if(((NonTerminal) sents).getIntermediateCode() == null)
-			icb.addQuadruple("BR", ST);
-		//Añado el codigo intermedio del if.
-		icb.addQuadruples(((NonTerminal) sents).getIntermediateCode());
+		if(sents != null){
+			//Añado el codigo intermedio del if.
+			icb.addQuadruples(((NonTerminal) sents).getIntermediateCode());
+		} 
 		//Salto al final del if.
 		icb.addQuadruple("BR", ST);
 		icb.addQuadruple("INL", SF);
 		//Antes de ejecutar las sentencias else, hay que asegurarse de que existe sentencia else con código (puede ser epsilon). 
-		if(((NonTerminal) els).getIntermediateCode() == null)
-			icb.addQuadruple("BR", ST);
-		icb.addQuadruples(((NonTerminal) els).getIntermediateCode());
+	    if(sents != null) {
+			icb.addQuadruples(((NonTerminal) els).getIntermediateCode());
+		}
 		//Salto para llegar al final sin ejecutar el if y/o el else.
 		icb.addQuadruple("INL", ST);
 		
 		//Creo la sentencia condicional.
 		SentenciaCondicional cond = new SentenciaCondicional();
 		
+
+		List<QuadrupleIF> cuads = icb.create();
 		//Seteo el codigo intermedio de la sentencia condicional.
-		cond.setIntermediateCode(icb.create());
-		
+		cond.setIntermediateCode(cuads);
+		 
 		RESULT = cond;
 	:};
 sentenciaifFuncion ::= 
@@ -1703,17 +1736,17 @@ sentenciaifFuncion ::=
 		//En el caso de que no sea cierta la expresión salta a la expresión else.
 		icb.addQuadruple("BRF", exp_temp, SF);
 		//Compruebo de que exista sentencias en el if (puede ser epsilon).
-		if(((NonTerminal) sents).getIntermediateCode() == null)
-			icb.addQuadruple("BR", ST);
-		//Añado el codigo intermedio del if.
-		icb.addQuadruples(((NonTerminal) sents).getIntermediateCode());
+		if(sents != null){
+			//Añado el codigo intermedio del if.
+			icb.addQuadruples(((NonTerminal) sents).getIntermediateCode());
+		} 
 		//Salto al final del if.
 		icb.addQuadruple("BR", ST);
 		icb.addQuadruple("INL", SF);
 		//Antes de ejecutar las sentencias else, hay que asegurarse de que existe sentencia else con código (puede ser epsilon). 
-		if(((NonTerminal) els).getIntermediateCode() == null)
-			icb.addQuadruple("BR", ST);
-		icb.addQuadruples(((NonTerminal) els).getIntermediateCode());
+	    if(sents != null) {
+			icb.addQuadruples(((NonTerminal) els).getIntermediateCode());
+		}
 		//Salto para llegar al final sin ejecutar el if y/o el else.
 		icb.addQuadruple("INL", ST);
 		
@@ -1732,7 +1765,7 @@ rellenoifFuncion ::=
 	:}  
 	| epsilon 
 	{:
-		RESULT = new SentenciaGeneral();
+		RESULT = null;
 	:};
 rellenoif ::=  
 	ALTERNATIVASI DELIMFUNC listaSentencias:sents
@@ -1905,8 +1938,7 @@ parametroEscribir ::=
 
 		//Creo el código final.
 		Value valor = new Value(((TokenIF) lex).getLexema());
-		icb.addQuadruple("MV", temp_act, valor);
-		icb.addQuadruple("OUT", temp_act);
+		icb.addQuadruple("OUT", valor);
 		
 		//Creo la sentencia de escribir.
 		SentenciaEscribir escribir = new SentenciaEscribir();
@@ -1954,9 +1986,8 @@ parametroEscribir ::=
 		TemporalIF temp_act = tf.create();
 
 		//Creo el código final.
-		Value valor = new Value(null);
-		icb.addQuadruple("MV", temp_act, valor);
-		icb.addQuadruple("OUT", temp_act);
+		Value valor = new Value("\\n");
+		icb.addQuadruple("OUT", valor);
 		
 		//Creo la sentencia de escribir.
 		SentenciaEscribir escribir = new SentenciaEscribir();
