@@ -3,11 +3,15 @@ package compiler.code;
 import java.util.Arrays;
 import java.util.List;
 
+import compiler.intermediate.Temporal;
+import compiler.intermediate.Value;
+import compiler.intermediate.Variable;
 import compiler.semantic.type.TypeSimple;
 
 import es.uned.lsi.compiler.code.ExecutionEnvironmentIF;
 import es.uned.lsi.compiler.code.MemoryDescriptorIF;
 import es.uned.lsi.compiler.code.RegisterDescriptorIF;
+import es.uned.lsi.compiler.intermediate.OperandIF;
 import es.uned.lsi.compiler.intermediate.QuadrupleIF;
 
 /**
@@ -93,7 +97,58 @@ public class ExecutionEnvironmentEns2001
     @Override
     public final String translate (QuadrupleIF quadruple)
     {      
-        //TODO: Student work
-        return quadruple.toString(); 
+        String operator = quadruple.getOperation();
+        String operando1 = traducir_operando(quadruple.getFirstOperand());
+        String operando2 = traducir_operando(quadruple.getSecondOperand());
+        String referencia = traducir_operando(quadruple.getResult());
+        String resultado = "; Quadrupla: " + quadruple.toString() + "\n";
+        
+        QuadruplaFinal quadrupla_final = new QuadruplaFinal(operator, referencia, operando1, operando2);
+        
+        resultado += quadrupla_final.getCodigoFinal();
+        
+        return resultado; 
+    }
+    
+    private String traducir_operando(OperandIF operando) {
+    	String resultado;
+    	if (operando == null) {
+    		return null;
+    	}
+    	switch(operando.getClass().getSimpleName()) {
+    		case "Value":
+    			switch(((Value) operando).getValue().toString()) {
+    				case "cierto":
+    					resultado = "#1";
+    					break;
+    				case "falso":
+    					resultado = "#0";
+    					break;
+    				default:
+    					if(((Value) operando).getValue() instanceof String) {
+    						//Comprobar que la cadena de cracteres se representa así.
+    						resultado = ((Value) operando).getValue().toString();
+    					} else {
+    						resultado = "#" + ((Value) operando).getValue();
+    					}
+    			}
+    			break;
+    		case "Temporal":
+    			resultado = "#" + ((Temporal) operando).getAddress() + "[.IX]";
+    			break;
+    		case "Variable":
+    				Variable v = (Variable) operando;
+    				if(v.isGlobal()) {
+    					resultado = "/" + v.getAddress(); 
+    				} else {
+    					//FALTA RELLENAR CUANDO IMPLEMENTE LAS FUNCIONES. 
+    					resultado = null;
+    				}
+    			break;
+    		default:
+    			resultado = null;
+    			throw new RuntimeException("Se ha pasado un operando cuya clase no es compatible con el ensamblador: " + operando.getClass().getSimpleName());
+    	}
+    	return resultado;
     }
 }

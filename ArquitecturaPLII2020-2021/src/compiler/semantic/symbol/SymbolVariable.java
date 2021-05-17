@@ -14,6 +14,7 @@ import es.uned.lsi.compiler.semantic.type.TypeIF;
 public class SymbolVariable
     extends SymbolBase
 {  
+	private Integer address;
     private String value;
     //Falso o null por valor, true por referencia.
     private boolean valvsref;
@@ -51,5 +52,9 @@ public class SymbolVariable
     
     public void setIsInit(boolean bool) {
     	isInit = bool;
+    }
+    
+    public void setAddress(Integer address) {
+    	this.address = address;
     }
 }

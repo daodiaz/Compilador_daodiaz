@@ -1,5 +1,5 @@
 package compiler.syntax.nonTerminal;
 
-public class AxiomIMPL extends Axiom {
+public class Axiom_IMPL extends Axiom {
 
 }

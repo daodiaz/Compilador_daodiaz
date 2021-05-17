@@ -44,7 +44,7 @@ public class TypeArray
     public int getSize ()
     {
         // TODO: Student work
-        return 1;
+        return rango;
     }
    
     

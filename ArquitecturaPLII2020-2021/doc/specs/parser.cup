@@ -181,22 +181,52 @@ program ::=
    :}
   axiom:ax
   {: 
+		//Aplico las instrucciones indicadas en las diapositivas para realizar la resolución de referencias simbólicas.
+		int gAddress = 0;
+		int lOffset = 0;
+		List<ScopeIF> scopes = scopeManager.getAllScopes();
+		for (ScopeIF scope: scopes){
+			List<SymbolIF> symbols = scope.getSymbolTable().getSymbols();
+			for(SymbolIF s : symbols){
+				if(s instanceof SymbolVariable){
+					if(scope.getLevel() == 0){
+						((SymbolVariable) s).setAddress(gAddress);
+						gAddress += s.getType().getSize();
+					} else {
+						((SymbolVariable) s).setAddress(lOffset);
+						lOffset +=  s.getType().getSize();
+						//Obtengo la funcion.
+						//SymbolIF funcion = scopeManager.getSymbol(s.getScope().getName());
+						//Incrementar el size de la funcion o del procedimiento en uno ya que cada campo ocupa uno sea cual sea el campo. 
+					}
+				}
+			}
+			List<TemporalIF> temporals = scope.getTemporalTable().getTemporals();
+			for(TemporalIF t : temporals){
+				t.setAddress(lOffset);
+				lOffset++;
+			}
+		}
   		// No modificar esta estructura, aunque se pueden añadir más acciones semánticas
-  		
-  		//List intermediateCode = ax.getIntermediateCode ();
-  		//finalCodeFactory.create (intermediateCode);
+  		ScopeIF scope = scopeManager.getCurrentScope();
+		IntermediateCodeBuilder icb = new IntermediateCodeBuilder(scope);
+		
+		icb.addQuadruples(((Axiom_IMPL) ax).getIntermediateCode());
+		icb.addQuadruple("DATA", gAddress);
+
+		List<QuadrupleIF> intermediate_code = icb.create();
+
+  		finalCodeFactory.setEnvironment(CompilerContext.getExecutionEnvironment());
+		finalCodeFactory.create(intermediate_code);
 
   		// En caso de no comentarse las dos sentencias anteriores puede generar una excepcion
   		// en las llamadas a cupTest si el compilador no está completo. Esto es debido a que 
   		// aún no se tendrá implementada la generación de código intermedio ni final.
   		// Para la entrega final deberán descomentarse y usarse.
-		ScopeIF scope = scopeManager.getCurrentScope();
-		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		
-		icb.addQuadruples(((Axiom) ax).getIntermediateCode());
 
   		syntaxErrorManager.syntaxInfo("Análisis semántico terminado ahora en copia código intermedio;");
-        for (QuadrupleIF quadruple : icb.create()) {
+        for (QuadrupleIF quadruple : intermediate_code) {
           syntaxErrorManager.syntaxInfo(quadruple.toString());
         }
         syntaxErrorManager.syntaxInfo("Parsing process ended.");
@@ -214,7 +244,7 @@ axiom ::=
 		
 		icb.addQuadruples(((ProgramaPrincipal) principal).getIntermediateCode());
 
-		Axiom ax = new AxiomIMPL();
+		Axiom ax = new Axiom_IMPL();
 		ax.setIntermediateCode(icb.create());
 
 		RESULT = ax;
