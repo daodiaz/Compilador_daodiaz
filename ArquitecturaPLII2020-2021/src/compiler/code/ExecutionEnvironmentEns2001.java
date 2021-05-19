@@ -3,6 +3,7 @@ package compiler.code;
 import java.util.Arrays;
 import java.util.List;
 
+import compiler.intermediate.Label;
 import compiler.intermediate.Temporal;
 import compiler.intermediate.Value;
 import compiler.intermediate.Variable;
@@ -144,6 +145,9 @@ public class ExecutionEnvironmentEns2001
     					//FALTA RELLENAR CUANDO IMPLEMENTE LAS FUNCIONES. 
     					resultado = null;
     				}
+    			break;
+    		case "Label":
+    			resultado = ((Label) operando).getName();
     			break;
     		default:
     			resultado = null;

@@ -7,6 +7,6 @@ public class NOT extends QuadruplaFinal {
 	}
 
 	public void traducir_quadrupla(String referencia, String operando1, String operando2) {
-		codigo_final =  "NOT " + operando1 + "\n";
+		codigo_final =  "NOT " + referencia + "\n";
 	}
 }

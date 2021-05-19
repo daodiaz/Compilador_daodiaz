@@ -39,7 +39,38 @@ public class QuadruplaFinal {
 			codigo_final = (new BRF(operador, referencia, operando1, operando2)).getCodigoFinal(); 
 			break;
 		case "BRT":
-			codigo_final = (new BRT(operador, referencia, operando1, operando2)).getCodigoFinal(); 
+			codigo_final = (new BRT(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
+		case "GR":
+			codigo_final = (new GR(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
+		case "LS":
+			codigo_final = (new LS(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
+		case "EQ":
+			codigo_final = (new EQ(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
+		case "MVA":
+			codigo_final = "FALTA IMPLEMENTAR";
+			break;
+		case "DATA":
+			codigo_final = "FALTA IMPLEMENTAR";
+			break;
+		case "MVP":
+			codigo_final = (new MVP(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
+		case "STA":
+			codigo_final = (new STA(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
+		case "STP":
+			codigo_final =  "FALTA IMPLEMENTAR, COMPROBAR SI ES NECESARIO";
+			break;
+		case "OUT":
+			codigo_final = "FALTA IMPLEMENTAR";
+			break;
+		case "INC":
+			
+			break;
 		default:
 			throw new RuntimeException("NO se ha definido una acción de traducción a codigo final para la siguiente operacion de codigo intermedio: " + operador);
 		}
