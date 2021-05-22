@@ -1968,7 +1968,7 @@ parametroEscribir ::=
 
 		//Creo el código final.
 		Value valor = new Value(((TokenIF) lex).getLexema());
-		icb.addQuadruple("OUT", valor);
+		icb.addQuadruple("OUT_STRING", valor);
 		
 		//Creo la sentencia de escribir.
 		SentenciaEscribir escribir = new SentenciaEscribir();
@@ -1995,7 +1995,7 @@ parametroEscribir ::=
 		
 		//Creo el código intermedio.
 		icb.addQuadruples(((Expresion) exp).getIntermediateCode());
-		icb.addQuadruple("OUT", temp_act);
+		icb.addQuadruple("OUT_INT", temp_act);
 
 		//Creo la sentencia de escribir.
 		SentenciaEscribir escribir = new SentenciaEscribir();
@@ -2017,7 +2017,7 @@ parametroEscribir ::=
 
 		//Creo el código final.
 		Value valor = new Value("\\n");
-		icb.addQuadruple("OUT", valor);
+		icb.addQuadruple("OUT_STRING", valor);
 		
 		//Creo la sentencia de escribir.
 		SentenciaEscribir escribir = new SentenciaEscribir();

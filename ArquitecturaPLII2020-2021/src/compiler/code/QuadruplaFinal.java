@@ -54,7 +54,7 @@ public class QuadruplaFinal {
 			codigo_final = "FALTA IMPLEMENTAR";
 			break;
 		case "DATA":
-			codigo_final = "FALTA IMPLEMENTAR";
+			codigo_final = (new DATA(operador, referencia, operando1, operando2)).getCodigoFinal();
 			break;
 		case "MVP":
 			codigo_final = (new MVP(operador, referencia, operando1, operando2)).getCodigoFinal();
@@ -65,11 +65,14 @@ public class QuadruplaFinal {
 		case "STP":
 			codigo_final =  "FALTA IMPLEMENTAR, COMPROBAR SI ES NECESARIO";
 			break;
-		case "OUT":
+		case "OUT_STRING":
 			codigo_final = "FALTA IMPLEMENTAR";
 			break;
+		case "OUT_INT":
+			codigo_final = (new WRINT(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
 		case "INC":
-			
+			codigo_final = (new INC(operador, referencia, operando1, operando2)).getCodigoFinal();
 			break;
 		default:
 			throw new RuntimeException("NO se ha definido una acción de traducción a codigo final para la siguiente operacion de codigo intermedio: " + operador);
