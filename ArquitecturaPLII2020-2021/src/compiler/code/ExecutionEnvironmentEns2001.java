@@ -127,7 +127,7 @@ public class ExecutionEnvironmentEns2001
     					break;
     				default:
     					if(((Value) operando).getValue() instanceof String) {
-    						//Comprobar que la cadena de cracteres se representa asÃ­.
+    						//Comprobar que la cadena de cracteres se representa así.
     						resultado = ((Value) operando).getValue().toString();
     					} else {
     						resultado = "#" + ((Value) operando).getValue();
@@ -140,6 +140,7 @@ public class ExecutionEnvironmentEns2001
     		case "Variable":
     				Variable v = (Variable) operando;
     				if(v.isGlobal()) {
+    					System.out.println("El nombre de la variable es: " + v.getName() + " con direccion " + v.getAddress());
     					resultado = "/" + v.getAddress(); 
     				} else {
     					//FALTA RELLENAR CUANDO IMPLEMENTE LAS FUNCIONES. 

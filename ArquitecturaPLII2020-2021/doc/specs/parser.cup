@@ -182,7 +182,7 @@ program ::=
   axiom:ax
   {: 
 		//Aplico las instrucciones indicadas en las diapositivas para realizar la resolución de referencias simbólicas.
-		int gAddress = 0;
+		int gAddress = 10000;
 		int lOffset = 0;
 		List<ScopeIF> scopes = scopeManager.getAllScopes();
 		for (ScopeIF scope: scopes){
@@ -191,6 +191,7 @@ program ::=
 				if(s instanceof SymbolVariable){
 					if(scope.getLevel() == 0){
 						((SymbolVariable) s).setAddress(gAddress);
+						System.out.println("El tama�o del tipo es: " +  s.getType().getSize());
 						gAddress += s.getType().getSize();
 					} else {
 						((SymbolVariable) s).setAddress(lOffset);
@@ -211,8 +212,10 @@ program ::=
   		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilder icb = new IntermediateCodeBuilder(scope);
 		
+		System.out.println("La direcci�n global es: "+ gAddress);
 		icb.addQuadruples(((Axiom_IMPL) ax).getIntermediateCode());
-		icb.addQuadruple("DATA", gAddress);
+		icb.addQuadruple("DATA", null, gAddress - 10000);
+		icb.addQuadruple("HALT");
 
 		List<QuadrupleIF> intermediate_code = icb.create();
 
@@ -370,7 +373,7 @@ deftipos ::=
 		//Instancio el  nuevo tipo y lo añado a la tabla de tipos.
 		TypeArray tipo_usuario = new TypeArray(scope, nombre_tipo);
 		//Seteo el rango del tipo añadido y de su tipo base.
-		tipo_usuario.setRango(rango);
+		tipo_usuario.setRango(rango + 1);
 		tipo_usuario.setTypeSimple(tipe);
 		tyTable.addType(tipo_usuario);
 		System.out.println("Vector de tipo " + nombre_tipo + " de rango " + rango + " de tipo simple " + tipe.getName());
@@ -1310,10 +1313,12 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 		TemporalIF temp_act = tf.create();
 		int size = tipo_array.getTypeSimple().getSize();
 	
+		Variable variable = new Variable(nombre_vector, scope);
+		
 		//Creo el codigo intermedio necesario. Primero el ya añadido hasta le momento y ñuego el que añade esta operación.
 		icb.addQuadruples(((PrimitivaAritmetica) prim).getIntermediateCode());
 		icb.addQuadruple("MUL", temp_p, temp_p, size);
-		icb.addQuadruple("MVP", temp_act, temp_p);
+		icb.addQuadruple("MVP", temp_act, variable, temp_p);
 		
 		//Seteo el temporal y el codigointermedio de primitiva
 		array.setTemporal(temp_act);
@@ -1555,8 +1560,9 @@ listaSentencias ::=
 			icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
 			((SentenciaGeneral) sentencias).setIntermediateCode(icb.create());
 		} else {
-			icb.addQuadruples(((SentenciaGeneral) sentencias).getIntermediateCode());
 			icb.addQuadruples(((SentenciaGeneral) sent).getIntermediateCode());
+			icb.addQuadruples(((SentenciaGeneral) sentencias).getIntermediateCode());
+			
 			((SentenciaGeneral) sentencias).setIntermediateCode(icb.create());
 		}
 		

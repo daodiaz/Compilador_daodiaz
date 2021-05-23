@@ -1,7 +1,9 @@
 package compiler.intermediate;
 
+import compiler.semantic.symbol.SymbolVariable;
 import es.uned.lsi.compiler.intermediate.VariableIF;
 import es.uned.lsi.compiler.semantic.ScopeIF;
+import es.uned.lsi.compiler.semantic.symbol.SymbolIF;
 
 /**
  * Class for variables in intermediate code.
@@ -53,8 +55,8 @@ public class Variable
     @Override
     public final int getAddress ()
     {
-        // TODO : Student Work
-        return 0;
+    	SymbolVariable variable = (SymbolVariable) scope.getScopeManager().searchSymbol(name);
+        return variable.getAddress();
     }
 
     /**

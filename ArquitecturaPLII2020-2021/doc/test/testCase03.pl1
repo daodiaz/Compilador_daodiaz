@@ -1,7 +1,17 @@
 # programa que escribe una suma
 programa tres:
-
-
+	constantes
+		z = 5;
+	tipos
+		tipoVectorEnteros = vector [1..3] de entero;
+	variables
+		x,w	: entero;
+		h	: tipoVectorEnteros;
 comienzo
-	escribir(8 + 2);
+	x = 0;
+	para w en 0 .. 10:
+		x = x + 1;
+		escribir(x);
+	fin para;
+	escribir("Bucle terminado");
 fin.

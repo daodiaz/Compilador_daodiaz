@@ -1,0 +1,68 @@
+; Quadrupla: Quadruple - [MV T_2, 0, null]
+MOVE #0, #2[.IX]
+
+; Quadrupla: Quadruple - [STA x, T_2, null]
+MOVE #2[.IX], /10001
+
+; Quadrupla: Quadruple - [MV T_4, 0, null]
+MOVE #0, #4[.IX]
+
+; Quadrupla: Quadruple - [MV T_5, 10, null]
+MOVE #10, #5[.IX]
+
+; Quadrupla: Quadruple - [MV w, T_4, null]
+MOVE #4[.IX], /10000
+
+; Quadrupla: Quadruple - [INL L_0, null, null]
+L_0: NOP
+
+; Quadrupla: Quadruple - [GR T_11, w, T_5]
+SUB /10000, #5[.IX]
+BN /L_2
+MOVE #1, #11[.IX]
+BR /L_3
+L_2: MOVE #0, #11[.IX]
+L_3: NOP
+
+; Quadrupla: Quadruple - [BRT T_11, L_1, null]
+CMP #1, #11[.IX]
+BZ /L_1
+
+; Quadrupla: Quadruple - [MVA T_6, x, null]
+MOVE  /10001, #6[.IX]
+
+; Quadrupla: Quadruple - [MV T_7, 1, null]
+MOVE #1, #7[.IX]
+
+; Quadrupla: Quadruple - [ADD T_8, T_6, T_7]
+ADD #6[.IX], #7[.IX]
+MOVE .A, #8[.IX]
+
+; Quadrupla: Quadruple - [STA x, T_8, null]
+MOVE #8[.IX], /10001
+
+; Quadrupla: Quadruple - [MVA T_10, x, null]
+MOVE  /10001, #10[.IX]
+
+; Quadrupla: Quadruple - [OUT_INT T_10, null, null]
+WRINT #10[.IX]
+
+; Quadrupla: Quadruple - [INC w, w, null]
+INC /10000
+
+; Quadrupla: Quadruple - [BR L_0, null, null]
+BR /L_0
+
+; Quadrupla: Quadruple - [INL L_1, null, null]
+L_1: NOP
+
+; Quadrupla: Quadruple - [OUT_STRING "Bucle terminado", null, null]
+WRSTR /L_4
+L_4: DATA "Bucle terminado"
+
+; Quadrupla: Quadruple - [DATA null, 5, null]
+RES  5
+
+; Quadrupla: Quadruple - [HALT null, null, null]
+HALT
+

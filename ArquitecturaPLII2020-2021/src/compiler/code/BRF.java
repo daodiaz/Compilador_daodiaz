@@ -7,6 +7,6 @@ public class BRF extends QuadruplaFinal {
 	}
 	
 	public void traducir_quadrupla(String referencia, String operando1, String operando2) {
-		codigo_final =  "CMP #0, " + operando1 + "\n" + "BZ /" + referencia + "\n";
+		codigo_final =  "CMP #0, " + referencia + "\n" + "BZ /" + operando1 + "\n";
 	}
 }

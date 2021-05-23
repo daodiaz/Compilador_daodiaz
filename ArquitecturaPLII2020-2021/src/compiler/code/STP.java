@@ -8,6 +8,6 @@ public class STP extends QuadruplaFinal {
 	}
 	
 	public void traducir_quadrupla(String referencia, String operando1, String operando2) {
-		codigo_final =  "MOVE " + operando1 + ", " + referencia + "\n";
+		codigo_final =  "MOVE " + operando1 + ", [.R1]\n";
 	}
 }
