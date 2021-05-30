@@ -2,12 +2,12 @@ package compiler.syntax.nonTerminal;
 
 public class PrimitivaAritmetica extends Expresion {
 
-	private String nombre_vector;
 	private String nombre;
 	
 	public PrimitivaAritmetica(Expresion expresion_izq, String operando, Expresion expresion_der) {
 		super(expresion_izq, operando, expresion_der);
 		tipo = "entero";
+		type = operando;
 	}
 
 	/*En el caso de las primitivas lo único que hacen es devolver su valor*/
@@ -40,6 +40,14 @@ public class PrimitivaAritmetica extends Expresion {
 	
 	public String getNombre() {
 		return nombre;
+	}
+	
+	public String getVectorType() {
+		return operando;
+	}
+	
+	public void setVectorName(String name) {
+		nombre_vector = name;
 	}
 
 }

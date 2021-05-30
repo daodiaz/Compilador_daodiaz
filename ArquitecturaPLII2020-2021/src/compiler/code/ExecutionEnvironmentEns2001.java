@@ -7,6 +7,8 @@ import compiler.intermediate.Label;
 import compiler.intermediate.Temporal;
 import compiler.intermediate.Value;
 import compiler.intermediate.Variable;
+import compiler.semantic.symbol.SymbolFunction;
+import compiler.semantic.symbol.SymbolProcedure;
 import compiler.semantic.type.TypeSimple;
 
 import es.uned.lsi.compiler.code.ExecutionEnvironmentIF;
@@ -138,7 +140,7 @@ public class ExecutionEnvironmentEns2001
     			resultado = "#" + ((Temporal) operando).getAddress() + "[.IX]";
     			break;
     		case "Variable":
-    				Variable v = (Variable) operando;
+    			Variable v = (Variable) operando;
     				if(v.isGlobal()) {
     					System.out.println("El nombre de la variable es: " + v.getName() + " con direccion " + v.getAddress());
     					resultado = "/" + v.getAddress(); 

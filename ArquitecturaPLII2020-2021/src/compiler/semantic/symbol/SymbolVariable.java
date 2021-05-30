@@ -19,6 +19,7 @@ public class SymbolVariable
     //Falso o null por valor, true por referencia.
     private boolean valvsref;
     private boolean isInit;
+    private String type;
     
     /**
      * Constructor for SymbolVariable.
@@ -60,5 +61,13 @@ public class SymbolVariable
     
     public Integer getAddress() {
     	return address;
+    }
+    
+    public String getSimpleType() {
+    	return type;
+    }
+    
+    public void setSimpleType(String type) {
+    	this.type = type;
     }
 }

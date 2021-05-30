@@ -7,7 +7,7 @@ public class WRINT extends QuadruplaFinal {
 	}
 	
 	public void traducir_quadrupla(String referencia, String operando1, String operando2) {
-		codigo_final =  "WRINT " + referencia + "\n";
+		codigo_final =  "WRINT " + referencia + "\n" + "WRCHAR #10 \n";
 	}
 
 }

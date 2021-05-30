@@ -13,6 +13,6 @@ public class WRSTR extends QuadruplaFinal {
 	public void traducir_quadrupla(String referencia, String operando1, String operando2) {
 		LabelFactoryIF lf = new LabelFactory();
 		LabelIF et1 = lf.create();
-		codigo_final =  "WRSTR /" + et1 + "\n" + et1 + ": DATA " + referencia + "\n";
+		codigo_final =  "WRSTR /" + et1 + "\n" + et1 + ": DATA " + referencia + "\n" + "WRCHAR #10 \n";
 	}
 }

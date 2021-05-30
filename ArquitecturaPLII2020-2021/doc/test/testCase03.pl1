@@ -5,13 +5,34 @@ programa tres:
 	tipos
 		tipoVectorEnteros = vector [1..3] de entero;
 	variables
-		x,w	: entero;
-		h	: tipoVectorEnteros;
+		x,w,j,l	: entero;
+		h,v	: tipoVectorEnteros;
+	subprogramas
+		procedimiento ejemplo (a : entero):
+			comienzo
+				a = a + 1;
+			fin;
 comienzo
-	x = 0;
+	h[1] = 5 + 2 * 7;
+	escribir(h[1]);
+	v[1] = 1;
+	x = h[v[1]];
+	j = x;
+	ejemplo(x);
 	para w en 0 .. 10:
-		x = x + 1;
-		escribir(x);
+		j = j + 1;
+		escribir(j);
+		para l en 0 .. 2:
+			si ((h[1] < 30) y (j < 24) y (l == 0)) entonces:
+				si no((h[1] == 2)) entonces:
+					escribir(0);
+				sino:
+					escribir(5);
+				fin si;
+			sino:
+				escribir("error");
+			fin si;
+		fin para;
 	fin para;
 	escribir("Bucle terminado");
 fin.

@@ -77,6 +77,12 @@ public class QuadruplaFinal {
 		case "HALT":
 			codigo_final = (new HALT(operador, referencia, operando1, operando2)).getCodigoFinal();
 			break;
+		case "PARAM":
+			codigo_final = "";
+			break;
+		case "CALL":
+			codigo_final = "";
+			break;
 		default:
 			throw new RuntimeException("NO se ha definido una acción de traducción a codigo final para la siguiente operacion de codigo intermedio: " + operador);
 		}

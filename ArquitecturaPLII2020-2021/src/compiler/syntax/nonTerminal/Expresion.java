@@ -6,6 +6,9 @@ public abstract class Expresion extends NonTerminal {
 	protected Expresion expresion_der;
 	protected Object valor;
 	protected String tipo;
+	protected String type;
+	protected String nombre_vector;
+
 	
 	public Expresion (Expresion expresion_izq, String operando, Expresion expresion_der) {
 		this.expresion_izq = expresion_izq;
@@ -29,6 +32,14 @@ public abstract class Expresion extends NonTerminal {
 	
 	public String getType() {
 		return tipo;
+	}
+	
+	public String getVectorType() {
+		return type;
+	}
+	
+	public String getVectorName() {
+		return nombre_vector;
 	}
 	
 }

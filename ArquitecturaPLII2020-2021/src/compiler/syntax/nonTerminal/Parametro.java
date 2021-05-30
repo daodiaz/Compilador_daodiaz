@@ -1,6 +1,6 @@
 package compiler.syntax.nonTerminal;
 
-public class Parametro {
+public class Parametro  extends NonTerminal{
 
 		private String nombre;
 		private boolean valvsref;

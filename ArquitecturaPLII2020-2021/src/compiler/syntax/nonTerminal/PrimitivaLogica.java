@@ -8,6 +8,7 @@ public class PrimitivaLogica extends Expresion {
 	public PrimitivaLogica(Expresion expresion_izq, String operando, Expresion expresion_der) {
 		super(expresion_izq, operando, expresion_der);
 		tipo = "boolean";
+		type = operando;
 	}
 
 	@Override
@@ -20,6 +21,10 @@ public class PrimitivaLogica extends Expresion {
 	public int getResultado() {
 		// TODO Auto-generated method stub
 		return -1;
+	}
+	
+	public String getVectorType() {
+		return operando;
 	}
 	
 	public void setValorLogico(boolean valor) {
@@ -40,5 +45,9 @@ public class PrimitivaLogica extends Expresion {
 	
 	public String getNombre() {
 		return nombre;
+	}
+	
+	public void setVectorName(String name) {
+		nombre_vector = name;
 	}
 }
