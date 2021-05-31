@@ -35,6 +35,10 @@ public class SymbolParameter
     	valvsref = bandera;
     }
     
+    public boolean getValVSRef() {
+    	return valvsref;
+    }
+    
     public void setValue(String value) {
     	this.value = value;
     }

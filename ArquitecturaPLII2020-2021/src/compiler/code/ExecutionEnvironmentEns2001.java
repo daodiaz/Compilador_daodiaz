@@ -1,5 +1,6 @@
 package compiler.code;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -31,6 +32,7 @@ public class ExecutionEnvironmentEns2001
        ".R5", ".R6", ".R7", ".R8", ".R9"
     };
     
+    private static ArrayList<String> cadenas;
     private RegisterDescriptorIF registerDescriptor;
     private MemoryDescriptorIF   memoryDescriptor;
     
@@ -40,6 +42,7 @@ public class ExecutionEnvironmentEns2001
     public ExecutionEnvironmentEns2001 ()
     {       
         super ();
+        cadenas = new ArrayList<String>();
     }
     
     /**
@@ -157,5 +160,14 @@ public class ExecutionEnvironmentEns2001
     			throw new RuntimeException("Se ha pasado un operando cuya clase no es compatible con el ensamblador: " + operando.getClass().getSimpleName());
     	}
     	return resultado;
+    }
+    
+    //Método para acceder a la lista de cadenas desde fuera.
+    public static void addCadena(String cadena){
+    	cadenas.add(cadena);
+    }
+    
+    public static ArrayList<String> getCadenas(){
+    	return cadenas;
     }
 }

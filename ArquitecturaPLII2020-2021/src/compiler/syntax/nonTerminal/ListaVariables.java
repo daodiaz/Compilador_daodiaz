@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class ListaVariables extends NonTerminal {
 	private static ArrayList<Parametro> lista_variables = new ArrayList<Parametro>();
-	
+	private static boolean enDeclaracion = false;
 	public ListaVariables () {
 		
 	}
@@ -21,5 +21,13 @@ public class ListaVariables extends NonTerminal {
 	
 	public static ArrayList<Parametro> getVariables(){
 		return lista_variables;
+	}
+	
+	public static boolean getEnDeclaracion() {
+		return enDeclaracion;
+	}
+	
+	public static void setEnDeclaracion(boolean bandera) {
+		enDeclaracion = bandera;
 	}
 }
