@@ -24,7 +24,11 @@ comienzo
 	si conjuncion entonces:
 		escribir("cierto");
 	sino:
-		escribir("falso");
+		si (a < b) entonces:
+			escribir("falsocierto");
+		sino:
+			escribir("falso");
+		fin si;
 	fin si;	
 	
 

@@ -1,0 +1,6 @@
+; Quadrupla: Quadruple - [DATA null, 0, null]
+RES  0
+
+; Quadrupla: Quadruple - [HALT null, null, null]
+HALT
+

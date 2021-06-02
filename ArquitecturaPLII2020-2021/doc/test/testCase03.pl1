@@ -3,8 +3,8 @@ programa tres:
 	constantes
 		z = 5;
 	tipos
-		tipoVectorEnteros = vector [1..3] de entero;
-		tipoVectorBooleanos = vector [1..3] de booleano;
+		tipoVectorEnteros = vector [0..3] de entero;
+		tipoVectorBooleanos = vector [0..3] de booleano;
 	variables
 		x,w,j,l	: entero;
 		g,k	: booleano;
@@ -19,7 +19,7 @@ programa tres:
 			variables 
 				suma: entero;
 			subprogramas
-				funcion anidada (a: tipoVectorEnteros): booleano:
+				funcion anidada(VAR a: tipoVectorEnteros): booleano:
 					variables
 						d:	entero;
 						k: 	booleano;
@@ -48,12 +48,14 @@ comienzo
 	escribir(h[1]);
 	escribir(50 + 50);
 	v[1] = 1;
+	v[0] = 5;
+	v[2] = 5;
 	X = h[v[1]];
-	j = x;
+	j = 0;
 	ejemplo(x);
 	para w en 0 .. x:
+		escribir(w);
 		j = j + 1;
-		escribir(j);
 		para l en 0 .. 2:
 			si ((h[1] < 15) y (j < 15) y (l == 0)) entonces:
 				si no((h[1] == 2)) entonces:

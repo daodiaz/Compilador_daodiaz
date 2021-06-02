@@ -1,0 +1,20 @@
+; Quadrupla: Quadruple - [OUT_STRING "hola", null, null]
+WRSTR /L_0
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [OUT_STRING \n, null, null]
+WRSTR /L_1
+
+; Quadrupla: Quadruple - [OUT_STRING "mundo", null, null]
+WRSTR /L_2
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [DATA null, 0, null]
+RES  0
+
+; Quadrupla: Quadruple - [HALT null, null, null]
+HALT
+L_0: DATA "hola"
+L_1: DATA "\n"
+L_2: DATA "mundo"
+

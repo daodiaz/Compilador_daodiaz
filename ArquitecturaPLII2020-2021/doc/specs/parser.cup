@@ -189,29 +189,36 @@ program ::=
 		int gAddress = 10000;
 		int lOffset = 0;
 		List<ScopeIF> scopes = scopeManager.getAllScopes();
-		for (ScopeIF scope: scopes){
-			List<SymbolIF> symbols = scope.getSymbolTable().getSymbols();
-			for(SymbolIF s : symbols){
-				if(s instanceof SymbolVariable){
-					if(scope.getLevel() == 0){
-						((SymbolVariable) s).setAddress(gAddress);
-						System.out.println("El tama�o del tipo es: " +  s.getType().getSize());
-						gAddress += s.getType().getSize();
-					} else {
-						((SymbolVariable) s).setAddress(lOffset);
-						lOffset +=  s.getType().getSize();
-						//Obtengo la funcion.
-						//SymbolIF funcion = scopeManager.getSymbol(s.getScope().getName());
-						//Incrementar el size de la funcion o del procedimiento en uno ya que cada campo ocupa uno sea cual sea el campo. 
+		if(scopes != null){
+			for (ScopeIF scope: scopes){
+				List<SymbolIF> symbols = scope.getSymbolTable().getSymbols();
+				if(symbols != null){
+					for(SymbolIF s : symbols){
+						if(s instanceof SymbolVariable){
+							if(scope.getLevel() == 0){
+								((SymbolVariable) s).setAddress(gAddress);
+								System.out.println("El tama�o del tipo es: " +  s.getType().getSize());
+								gAddress += s.getType().getSize();
+							} else {
+								((SymbolVariable) s).setAddress(lOffset);
+								lOffset +=  s.getType().getSize();
+								//Obtengo la funcion.
+								//SymbolIF funcion = scopeManager.getSymbol(s.getScope().getName());
+								//Incrementar el size de la funcion o del procedimiento en uno ya que cada campo ocupa uno sea cual sea el campo. 
+							}
+						}
+					}
+					List<TemporalIF> temporals = scope.getTemporalTable().getTemporals();
+					if(temporals != null){
+						for(TemporalIF t : temporals){
+							t.setAddress(lOffset);
+							lOffset++;
+						}
 					}
 				}
 			}
-			List<TemporalIF> temporals = scope.getTemporalTable().getTemporals();
-			for(TemporalIF t : temporals){
-				t.setAddress(lOffset);
-				lOffset++;
-			}
 		}
+		
   		// No modificar esta estructura, aunque se pueden añadir más acciones semánticas
   		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilder icb = new IntermediateCodeBuilder(scope);
@@ -243,6 +250,7 @@ axiom ::=
 	{:
 		System.out.println("Iniciando análisis programa principal");
 		scopeManager.openScope("Principal");
+		
 	:} 
 	defprincipal:principal 
 	{:
@@ -250,7 +258,7 @@ axiom ::=
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		
 		icb.addQuadruples(((ProgramaPrincipal) principal).getIntermediateCode());
-
+		
 		Axiom ax = new Axiom_IMPL();
 		ax.setIntermediateCode(icb.create());
 
@@ -378,6 +386,8 @@ deftipos ::=
 		TypeArray tipo_usuario = new TypeArray(scope, nombre_tipo);
 		//Seteo el rango del tipo añadido y de su tipo base.
 		tipo_usuario.setRango(rango + 1);
+		tipo_usuario.setRangoSup((int) rango_sup);
+		tipo_usuario.setRangoInf((int) rango_inf);
 		tipo_usuario.setTypeSimple(tipe);
 		tyTable.addType(tipo_usuario);
 		System.out.println("Vector de tipo " + nombre_tipo + " de rango " + rango + " de tipo simple " + tipe.getName());
@@ -484,9 +494,8 @@ valorango ::=
 			
 			//Creo el codigo intermedio.
 			icb.addQuadruples(((PrimitivaAritmetica) mv).getIntermediateCode());
-			icb.addQuadruple("MV", temp_act, temp_r);
+			icb.addQuadruple("MVM", temp_r, temp_act);
 			
-		
 			//Creo la primitiva.	
 			PrimitivaAritmetica vector = new PrimitivaAritmetica(null,null,null);
 		
@@ -507,7 +516,7 @@ valorango ::=
 			
 			//Creo el codigo intermedio.
 			icb.addQuadruples(arr.getIntermediateCode());
-			icb.addQuadruple("MV", temp_act, temp_r);
+			icb.addQuadruple("MVM", temp_r, temp_act);
 			
 			//Creo la primitiva.	
 			PrimitivaAritmetica vect = new PrimitivaAritmetica(null,null,null);
@@ -701,7 +710,7 @@ defvariables ::=
 				}
 				SymbolVariable variable = new SymbolVariable(scope, nombre_variable, tipe);
 				//Si la variable declarada ha tenido un var precediendole entonces es por referencia y le seteo dicha información.
-				if(elemento.getValVSRef() || vector){
+				if(elemento.getValVSRef()){
 					variable.setValVSRef(true);			
 				}
 				//Añado la variable a la cola de variables.
@@ -712,7 +721,7 @@ defvariables ::=
 				//En este caso estamos hablando de una declaración de parametros dentro de una declaración de función.
 				SymbolParameter parametro = new SymbolParameter(scope, nombre_variable.toLowerCase(), tipe);	
 				//Si la variable declarada ha tenido un var precediendole entonces es por referencia y le seteo dicha información.
-				if(elemento.getValVSRef() || vector){
+				if(elemento.getValVSRef()){
 					parametro.setValVSRef(true);			
 				}
 				System.out.println("Parametro de la funcion analizado: " + nombre_variable);
@@ -733,6 +742,7 @@ seccionvariables ::=
 		ListaVariables.clearVariables();
 	:}
 	| epsilon;
+	
 puntoycomaopcional ::= 
 	DSENTENCIAS
 	{:
@@ -767,6 +777,10 @@ tiporetornofuncion ::=
 procedimiento ::= 
 	COMIENZOPROCEDIMIENTO IDEN:id
 	{:
+		if(scopeManager.containsSymbol(((TokenIF) id).getLexema().toLowerCase())){
+			semanticErrorManager.semanticFatalError("Ya existe un simbolo con este nombre de procedimiento: " + ((TokenIF) id).getLexema().toLowerCase());
+		}
+		
 		String nombre_procedimiento = ((TokenIF) id).getLexema().toLowerCase();
 		//Creo un scope nuevo para añadir la información del procedimiento.
 		scopeManager.openScope(nombre_procedimiento.toLowerCase());
@@ -782,6 +796,9 @@ procedimiento ::=
 		if(parametros != null){
 			for(SymbolParameter parametro : (ArrayList<SymbolParameter>) parametros) {
 				//Los añado a la tabla de simbolos
+				if(parametro.getType().getClass().getSimpleName().equals("TypeArray") && !parametro.getValVSRef()){
+					semanticErrorManager.semanticFatalError("Los vectores solo pueden ser parametros por referencia, falta VAR para el vector: " + parametro.getName());
+				}
 				syTable.addSymbol(parametro);
 			}
 		}
@@ -805,6 +822,11 @@ procedimiento ::=
 	:};
 funcion ::= DECLAREFUNCION IDEN:id
 	{:
+			
+		if(scopeManager.containsSymbol(((TokenIF) id).getLexema().toLowerCase())){
+			semanticErrorManager.semanticFatalError("Ya existe un simbolo con este nombre de funci�n: " + ((TokenIF) id).getLexema().toLowerCase());
+		}
+		
 		//Abro una nueva scope para añadir la información de la función.
 		String nombre_funcion = ((TokenIF) id).getLexema().toLowerCase();
 		scopeManager.openScope(nombre_funcion.toLowerCase());
@@ -821,6 +843,9 @@ funcion ::= DECLAREFUNCION IDEN:id
 		//Guardo los paramteros declarados en la tabla actual.
 		if(parametros != null){
 			for(SymbolParameter parametro : (ArrayList<SymbolParameter>) parametros) {
+				if(parametro.getType().getClass().getSimpleName().equals("TypeArray") && !parametro.getValVSRef()){
+					semanticErrorManager.semanticFatalError("Los vectores solo pueden ser parametros por referencia, falta VAR para el vector: " + parametro.getName());
+				}
 				//Los añado a la tabla de simbolos
 				syTable.addSymbol(parametro);
 			}
@@ -872,9 +897,10 @@ defprincipal ::= COMIENZOPROGRAMA IDEN DELIMFUNC seccionconstantes secciontipos 
 	{:
 		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
+				
+		if(sentencias != null)
+			icb.addQuadruples(((SentenciaGeneral) sentencias).getIntermediateCode());
 		
-		icb.addQuadruples(((SentenciaGeneral) sentencias).getIntermediateCode());
-
 		ProgramaPrincipal principal = new ProgramaPrincipal();
 		
 		principal.setIntermediateCode(icb.create());
@@ -1228,10 +1254,12 @@ expresion ::=
 		ScopeIF scope = scopeManager.getCurrentScope();
 		IntermediateCodeBuilderIF icb = new IntermediateCodeBuilder(scope);
 		TemporalFactoryIF tf = new TemporalFactory(scope);
+		TemporalIF temp_act = tf.create();
 
 		icb.addQuadruples(((Array) v).getIntermediateCode());
+		icb.addQuadruple("MVM", ((Array) v).getTemporal(), temp_act);
 		
-		primitiva.setTemporal(((Array) v).getTemporal());
+		primitiva.setTemporal(temp_act);
 		primitiva.setIntermediateCode(icb.create());
 		
 		RESULT = primitiva;
@@ -1465,10 +1493,14 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 			System.out.println("Accediendo a vector: " + nombre_vector);
 			vector = scopeManager.searchSymbol(nombre_vector);
 			//Compruebo que no se haya pasado de dimensión el rango proporcionado (>=).
-			if(rango != null && ((int) rango >= ((TypeArray) vector.getType()).getRango())){
-				semanticErrorManager.semanticFatalError("Intento de acceso al array " + nombre_vector + " fuera de rango, su tamaño es " + ((TypeArray) vector.getType())
-.getRango() + " y se trata de acceder al miembro " + (int) rango);
+			if(rango != null && (((int) rango < ((TypeArray) vector.getType()).getRangoInf()) || ((int) rango > ((TypeArray) vector.getType()).getRangoSup()))){
+				semanticErrorManager.semanticFatalError("Intento de acceso al array " + nombre_vector + " fuera de rango, su rangos de valores son " + ((TypeArray) vector.getType()).getRangoInf() + " y " + ((TypeArray) vector.getType()).getRangoSup() + "; inteto de acceso a " + rango);
 			}
+			
+			//if(rango != null && ((int) rango >= ((TypeArray) vector.getType()).getRango() ) ){
+				//semanticErrorManager.semanticFatalError("Intento de acceso al array " + nombre_vector + " fuera de rango, su rangos de valores son " + ((TypeArray) vector.getType()).getRangoInf() + " y " + ((TypeArray) vector.getType()).getRangoSup() + "; inteto de acceso a " + rango);
+			//}
+			
 			tipo_array = (TypeArray) scopeManager.searchSymbol(nombre_vector).getType();
 		} else{
 			semanticErrorManager.semanticFatalError("No se ha encontrado un vector con el nombre: " + nombre_vector);
@@ -1488,6 +1520,7 @@ miembrovector::= IDEN:id CIZQUIERDO valorango:prim CDERECHO
 		
 		//Creo el codigo intermedio necesario. Primero el ya añadido hasta le momento y ñuego el que añade esta operación.
 		icb.addQuadruples(((PrimitivaAritmetica) prim).getIntermediateCode());
+		icb.addQuadruple("SUB", temp_p, temp_p, ((TypeArray) vector.getType()).getRangoInf());
 		icb.addQuadruple("MUL", temp_p, temp_p, size);
 		icb.addQuadruple("MVP", temp_act, variable, temp_p);
 		

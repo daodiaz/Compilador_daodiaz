@@ -124,10 +124,10 @@ public class ExecutionEnvironmentEns2001
     	switch(operando.getClass().getSimpleName()) {
     		case "Value":
     			switch(((Value) operando).getValue().toString()) {
-    				case "cierto":
+    				case "true":
     					resultado = "#1";
     					break;
-    				case "falso":
+    				case "false":
     					resultado = "#0";
     					break;
     				default:

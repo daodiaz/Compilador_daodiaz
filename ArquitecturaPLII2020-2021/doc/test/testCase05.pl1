@@ -11,16 +11,22 @@ comienzo
 
 	v[1] = 1;
 	v[3] = 3;
-	v[5] = 5;
+	v[4] = 5;
 
 	v[2] = v[1] + 1;
 
-	v[4] = v[3] * v[5] + 10;
+	v[5] = v[3] * v[4] + 10;
 
 
 	a = v[v[3]];
-
+	
+	escribir(v[1]);
+	escribir(v[2]);
 	escribir(a);
+	escribir(v[4]);
+	escribir(v[5]);
+escribir(v[6]);
+	
 	
 	
 

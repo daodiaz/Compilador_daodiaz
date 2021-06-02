@@ -1,0 +1,186 @@
+; Quadrupla: Quadruple - [MV T_0, 10, null]
+MOVE #10, #0[.IX]
+
+; Quadrupla: Quadruple - [MV T_1, 20, null]
+MOVE #20, #1[.IX]
+
+; Quadrupla: Quadruple - [ADD T_2, T_0, T_1]
+ADD #0[.IX], #1[.IX]
+MOVE .A, #2[.IX]
+
+; Quadrupla: Quadruple - [STA suma, T_2, null]
+MOVE #2[.IX], /10000
+
+; Quadrupla: Quadruple - [MVA T_4, suma, null]
+MOVE  /10000, #4[.IX]
+
+; Quadrupla: Quadruple - [MV T_5, 10, null]
+MOVE #10, #5[.IX]
+
+; Quadrupla: Quadruple - [MUL T_6, T_4, T_5]
+MUL #4[.IX], #5[.IX]
+MOVE .A, #6[.IX]
+
+; Quadrupla: Quadruple - [MV T_7, 4, null]
+MOVE #4, #7[.IX]
+
+; Quadrupla: Quadruple - [ADD T_8, T_6, T_7]
+ADD #6[.IX], #7[.IX]
+MOVE .A, #8[.IX]
+
+; Quadrupla: Quadruple - [STA resultado, T_8, null]
+MOVE #8[.IX], /10001
+
+; Quadrupla: Quadruple - [MVA T_10, suma, null]
+MOVE  /10000, #10[.IX]
+
+; Quadrupla: Quadruple - [OUT_INT T_10, null, null]
+WRINT #10[.IX]
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [MVA T_11, resultado, null]
+MOVE  /10001, #11[.IX]
+
+; Quadrupla: Quadruple - [OUT_INT T_11, null, null]
+WRINT #11[.IX]
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [MV T_12, true, null]
+MOVE #1, #12[.IX]
+
+; Quadrupla: Quadruple - [BRF T_12, L_0, null]
+CMP #0, #12[.IX]
+BZ /L_0
+
+; Quadrupla: Quadruple - [MV T_13, false, null]
+MOVE #0, #13[.IX]
+
+; Quadrupla: Quadruple - [BRF T_13, L_0, null]
+CMP #0, #13[.IX]
+BZ /L_0
+
+; Quadrupla: Quadruple - [MV T_14, 1, null]
+MOVE #1, #14[.IX]
+
+; Quadrupla: Quadruple - [BR L_1, null, null]
+BR /L_1
+
+; Quadrupla: Quadruple - [INL L_0, null, null]
+L_0: NOP
+
+; Quadrupla: Quadruple - [MV T_14, 0, null]
+MOVE #0, #14[.IX]
+
+; Quadrupla: Quadruple - [INL L_1, null, null]
+L_1: NOP
+
+; Quadrupla: Quadruple - [STA conjuncion, T_14, null]
+MOVE #14[.IX], /10003
+
+; Quadrupla: Quadruple - [MVA T_16, conjuncion, null]
+MOVE  /10003, #16[.IX]
+
+; Quadrupla: Quadruple - [BRF T_16, L_2, null]
+CMP #0, #16[.IX]
+BZ /L_2
+
+; Quadrupla: Quadruple - [MV T_17, 10, null]
+MOVE #10, #17[.IX]
+
+; Quadrupla: Quadruple - [MV T_18, 20, null]
+MOVE #20, #18[.IX]
+
+; Quadrupla: Quadruple - [LS T_19, T_17, T_18]
+SUB #17[.IX], #18[.IX]
+BN /L_8
+MOVE #0, #19[.IX]
+BR /L_9
+L_8: MOVE #1, #19[.IX]
+L_9: NOP 
+
+; Quadrupla: Quadruple - [BRF T_19, L_2, null]
+CMP #0, #19[.IX]
+BZ /L_2
+
+; Quadrupla: Quadruple - [MV T_20, 1, null]
+MOVE #1, #20[.IX]
+
+; Quadrupla: Quadruple - [BR L_3, null, null]
+BR /L_3
+
+; Quadrupla: Quadruple - [INL L_2, null, null]
+L_2: NOP
+
+; Quadrupla: Quadruple - [MV T_20, 0, null]
+MOVE #0, #20[.IX]
+
+; Quadrupla: Quadruple - [INL L_3, null, null]
+L_3: NOP
+
+; Quadrupla: Quadruple - [STA resultadologico, T_20, null]
+MOVE #20[.IX], /10002
+
+; Quadrupla: Quadruple - [MVA T_22, conjuncion, null]
+MOVE  /10003, #22[.IX]
+
+; Quadrupla: Quadruple - [BRF T_22, L_6, null]
+CMP #0, #22[.IX]
+BZ /L_6
+
+; Quadrupla: Quadruple - [OUT_STRING "cierto", null, null]
+WRSTR /L_10
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [BR L_7, null, null]
+BR /L_7
+
+; Quadrupla: Quadruple - [INL L_6, null, null]
+L_6: NOP
+
+; Quadrupla: Quadruple - [MV T_24, 10, null]
+MOVE #10, #24[.IX]
+
+; Quadrupla: Quadruple - [MV T_25, 20, null]
+MOVE #20, #25[.IX]
+
+; Quadrupla: Quadruple - [LS T_26, T_24, T_25]
+SUB #24[.IX], #25[.IX]
+BN /L_11
+MOVE #0, #26[.IX]
+BR /L_12
+L_11: MOVE #1, #26[.IX]
+L_12: NOP 
+
+; Quadrupla: Quadruple - [BRF T_26, L_4, null]
+CMP #0, #26[.IX]
+BZ /L_4
+
+; Quadrupla: Quadruple - [OUT_STRING "falsocierto", null, null]
+WRSTR /L_13
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [BR L_5, null, null]
+BR /L_5
+
+; Quadrupla: Quadruple - [INL L_4, null, null]
+L_4: NOP
+
+; Quadrupla: Quadruple - [OUT_STRING "falso", null, null]
+WRSTR /L_14
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [INL L_5, null, null]
+L_5: NOP
+
+; Quadrupla: Quadruple - [INL L_7, null, null]
+L_7: NOP
+
+; Quadrupla: Quadruple - [DATA null, 4, null]
+RES  4
+
+; Quadrupla: Quadruple - [HALT null, null, null]
+HALT
+L_10: DATA "cierto"
+L_13: DATA "falsocierto"
+L_14: DATA "falso"
+

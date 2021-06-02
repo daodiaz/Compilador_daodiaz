@@ -14,6 +14,8 @@ import es.uned.lsi.compiler.semantic.type.TypeIF;
 public class TypeArray
     extends TypeBase
 {   
+    int rango_sup;
+    int rango_inf;
     int rango;
     TypeIF tipo_simple;
  
@@ -62,5 +64,21 @@ public class TypeArray
     
     public int getRango() {
     	return rango;
+    }
+    
+    public void setRangoInf(int rango) {
+    	this.rango_inf = rango;
+    }
+    
+    public int getRangoInf() {
+    	return rango_inf;
+    }
+    
+    public void setRangoSup(int rango) {
+    	this.rango_sup = rango;
+    }
+    
+    public int getRangoSup() {
+    	return rango_sup;
     }
 }

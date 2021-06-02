@@ -77,6 +77,12 @@ public class QuadruplaFinal {
 		case "HALT":
 			codigo_final = (new HALT(operador, referencia, operando1, operando2)).getCodigoFinal();
 			break;
+		case "MVM":
+			codigo_final = (new MVM(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
+		case "SUB":
+			codigo_final = (new SUB(operador, referencia, operando1, operando2)).getCodigoFinal();
+			break;
 		case "PARAM":
 			codigo_final = "";
 			break;

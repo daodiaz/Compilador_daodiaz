@@ -15,6 +15,6 @@ public class GR extends QuadruplaFinal {
 		LabelFactoryIF lf = new LabelFactory();
 		LabelIF et1 = lf.create();
 		LabelIF et2 = lf.create();
-		codigo_final =  "SUB " + operando1 + ", " + operando2 + "\n" + "BN /" + et1 + "\n" + "MOVE #1, " + referencia + "\n" + "BR /" + et2 + "\n" + et1 + ": " + "MOVE #0, " + referencia + "\n" +  et2 + ": NOP\n";
+		codigo_final = "SUB " + operando1 + ", #1 \n" + "SUB .A, " + operando2 + "\n" + "BN /" + et1 + "\n" + "MOVE #1, " + referencia + "\n" + "BR /" + et2 + "\n" + et1 + ": " + "MOVE #0, " + referencia + "\n" +  et2 + ": NOP\n";
 	}
 }
