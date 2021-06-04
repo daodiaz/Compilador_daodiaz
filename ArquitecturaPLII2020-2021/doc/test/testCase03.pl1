@@ -13,7 +13,6 @@ programa tres:
 	subprogramas
 		procedimiento ejemplo (var a: entero):
 			comienzo
-				x = 1;
 			fin;
 		funcion ejFuncion (var c,b : entero): entero:
 			variables 

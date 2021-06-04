@@ -25,9 +25,5 @@ comienzo
 	escribir(a);
 	escribir(v[4]);
 	escribir(v[5]);
-escribir(v[6]);
 	
-	
-	
-
 fin.

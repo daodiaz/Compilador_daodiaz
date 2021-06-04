@@ -132,7 +132,6 @@ public class ExecutionEnvironmentEns2001
     					break;
     				default:
     					if(((Value) operando).getValue() instanceof String) {
-    						//Comprobar que la cadena de cracteres se representa así.
     						resultado = ((Value) operando).getValue().toString();
     					} else {
     						resultado = "#" + ((Value) operando).getValue();
