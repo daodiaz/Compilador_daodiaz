@@ -27,8 +27,7 @@ programa uno:
 	comienzo
 		x = 2 + 3;
 		z = 1 + 2 +3;
-		h[0] = 3;
-		ejFuncion(x,2);
+		h[1] = 3;
 		si a < b entonces:
 			si (b < a) entonces:
 				z = 5;

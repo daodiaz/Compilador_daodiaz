@@ -1,0 +1,75 @@
+; Quadrupla: Quadruple - [MV T_0, 10, null]
+MOVE #10, #0[.IX]
+
+; Quadrupla: Quadruple - [MV T_1, 10, null]
+MOVE #10, #1[.IX]
+
+; Quadrupla: Quadruple - [LS T_2, T_0, T_1]
+SUB #0[.IX], #1[.IX]
+BN /L_4
+MOVE #0, #2[.IX]
+BR /L_5
+L_4: MOVE #1, #2[.IX]
+L_5: NOP 
+
+; Quadrupla: Quadruple - [BRF T_2, L_2, null]
+CMP #0, #2[.IX]
+BZ /L_2
+
+; Quadrupla: Quadruple - [OUT_STRING "b es mayor que a", null, null]
+WRSTR /L_6
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [BR L_3, null, null]
+BR /L_3
+
+; Quadrupla: Quadruple - [INL L_2, null, null]
+L_2: NOP
+
+; Quadrupla: Quadruple - [MV T_4, 10, null]
+MOVE #10, #4[.IX]
+
+; Quadrupla: Quadruple - [MV T_5, 10, null]
+MOVE #10, #5[.IX]
+
+; Quadrupla: Quadruple - [LS T_6, T_4, T_5]
+SUB #4[.IX], #5[.IX]
+BN /L_7
+MOVE #0, #6[.IX]
+BR /L_8
+L_7: MOVE #1, #6[.IX]
+L_8: NOP 
+
+; Quadrupla: Quadruple - [BRF T_6, L_0, null]
+CMP #0, #6[.IX]
+BZ /L_0
+
+; Quadrupla: Quadruple - [OUT_STRING "a es mayor que b", null, null]
+WRSTR /L_9
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [BR L_1, null, null]
+BR /L_1
+
+; Quadrupla: Quadruple - [INL L_0, null, null]
+L_0: NOP
+
+; Quadrupla: Quadruple - [OUT_STRING "a y b son iguales", null, null]
+WRSTR /L_10
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [INL L_1, null, null]
+L_1: NOP
+
+; Quadrupla: Quadruple - [INL L_3, null, null]
+L_3: NOP
+
+; Quadrupla: Quadruple - [DATA null, 0, null]
+RES  0
+
+; Quadrupla: Quadruple - [HALT null, null, null]
+HALT
+L_6: DATA "b es mayor que a"
+L_9: DATA "a es mayor que b"
+L_10: DATA "a y b son iguales"
+

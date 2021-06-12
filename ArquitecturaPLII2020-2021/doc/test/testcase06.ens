@@ -1,0 +1,31 @@
+; Quadrupla: Quadruple - [MV T_0, 5, null]
+MOVE #5, #0[.IX]
+
+; Quadrupla: Quadruple - [STA c, T_0, null]
+MOVE #0[.IX], /10001
+
+; Quadrupla: Quadruple - [MV T_2, 18, null]
+MOVE #18, #2[.IX]
+
+; Quadrupla: Quadruple - [STA d, T_2, null]
+MOVE #2[.IX], /10002
+
+; Quadrupla: Quadruple - [MV T_6, null, null]
+MOVE null, #6[.IX]
+
+; Quadrupla: Quadruple - [STA suma, T_6, null]
+MOVE #6[.IX], /10000
+
+; Quadrupla: Quadruple - [MVA T_8, suma, null]
+MOVE  /10000, #8[.IX]
+
+; Quadrupla: Quadruple - [OUT_INT T_8, null, null]
+WRINT #8[.IX]
+WRCHAR #10 
+
+; Quadrupla: Quadruple - [DATA null, 3, null]
+RES  3
+
+; Quadrupla: Quadruple - [HALT null, null, null]
+HALT
+

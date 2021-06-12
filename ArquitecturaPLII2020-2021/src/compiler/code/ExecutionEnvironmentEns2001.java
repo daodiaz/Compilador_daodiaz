@@ -144,7 +144,6 @@ public class ExecutionEnvironmentEns2001
     		case "Variable":
     			Variable v = (Variable) operando;
     				if(v.isGlobal()) {
-    					System.out.println("El nombre de la variable es: " + v.getName() + " con direccion " + v.getAddress());
     					resultado = "/" + v.getAddress(); 
     				} else {
     					//FALTA RELLENAR CUANDO IMPLEMENTE LAS FUNCIONES. 

@@ -2,7 +2,7 @@
 programa siete:
 	constantes
 		a = 10;
-		b = 20;
+		b = 10;
 	
 comienzo
 

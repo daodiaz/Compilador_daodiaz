@@ -13,6 +13,7 @@ programa tres:
 	subprogramas
 		procedimiento ejemplo (var a: entero):
 			comienzo
+				a = 0;
 			fin;
 		funcion ejFuncion (var c,b : entero): entero:
 			variables 
@@ -43,19 +44,25 @@ programa tres:
 			fin;
 comienzo
 	j = 1;
-	h[j] = 2 * 5;
+	escribir(j);
+	h[1] = 2 * 5;
 	escribir(h[1]);
 	escribir(50 + 50);
 	v[1] = 1;
 	v[0] = 5;
 	v[2] = 5;
 	X = h[v[1]];
-	j = 0;
 	ejemplo(x);
+	escribir("variable inicializada x: ");
+	escribir(x);
 	para w en 0 .. x:
+		escribir("inicio bucle");
 		escribir(w);
 		j = j + 1;
+		escribir(j);
 		para l en 0 .. 2:
+			escribir("inicio bucle interno");
+			escribir(l);
 			si ((h[1] < 15) y (j < 15) y (l == 0)) entonces:
 				si no((h[1] == 2)) entonces:
 					escribir(0);
